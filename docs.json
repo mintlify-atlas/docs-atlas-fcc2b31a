@@ -105,6 +105,8 @@
           {
             "group": "Supporting Types",
             "pages": [
+              "api/data",
+              "api/timer",
               "api/constants",
               "api/exceptions",
               "api/version"

@@ -1,0 +1,202 @@
+---
+title: "Data"
+description: "Binary data base class for handling raw byte data"
+---
+
+## Overview
+
+The `NFIQ2::Data` class provides a foundation for binary data handling in NFIQ 2. It extends `std::basic_string<uint8_t>` and provides convenient methods for reading, writing, and converting binary data.
+
+This class serves as the base class for `NFIQ2::FingerprintImageData` and other data-handling classes in the library.
+
+## Class Definition
+
+```cpp
+namespace NFIQ2 {
+    class Data : public std::basic_string<uint8_t> {
+        // Public interface
+    };
+}
+```
+
+## Constructors
+
+### Default Constructor
+
+```cpp
+Data();
+```
+
+Creates an empty Data object.
+
+### Constructor with Data Pointer
+
+```cpp
+Data(const uint8_t *pData, uint32_t dataSize);
+```
+
+<ParamField path="pData" type="const uint8_t*" required>
+  Pointer to binary data
+</ParamField>
+
+<ParamField path="dataSize" type="uint32_t" required>
+  Size of data at the pointer in bytes
+</ParamField>
+
+Creates a Data object from an existing data buffer.
+
+### Copy Constructor
+
+```cpp
+Data(const Data &otherData);
+```
+
+<ParamField path="otherData" type="const Data&" required>
+  Data object to copy from
+</ParamField>
+
+### String Constructor
+
+```cpp
+explicit Data(const std::basic_string<uint8_t> &otherData);
+```
+
+<ParamField path="otherData" type="const std::basic_string<uint8_t>&" required>
+  Binary data in string format
+</ParamField>
+
+## Methods
+
+### readFromFile
+
+```cpp
+void readFromFile(const std::string &filename);
+```
+
+Reads the content from a file into this object.
+
+<ParamField path="filename" type="const std::string&" required>
+  Path to the file to read
+</ParamField>
+
+**Throws:** `NFIQ2::Exception` if the file cannot be opened.
+
+**Example:**
+```cpp
+NFIQ2::Data data;
+data.readFromFile("/path/to/file.dat");
+```
+
+### writeToFile
+
+```cpp
+void writeToFile(const std::string &filename) const;
+```
+
+Writes the content to a file.
+
+<ParamField path="filename" type="const std::string&" required>
+  Path to the file to write
+</ParamField>
+
+**Throws:** `NFIQ2::Exception` if the file cannot be opened.
+
+**Example:**
+```cpp
+data.writeToFile("/path/to/output.dat");
+```
+
+### toHexString
+
+```cpp
+std::string toHexString() const;
+```
+
+Generates a hexadecimal string representation of the buffer.
+
+**Returns:** The content of the buffer as a hexadecimal string.
+
+**Throws:** `NFIQ2::Exception` if no data is available in the buffer.
+
+**Example:**
+```cpp
+std::string hexStr = data.toHexString();
+std::cout << "Hex: " << hexStr << std::endl;
+```
+
+### fromBase64String
+
+```cpp
+void fromBase64String(const std::string &base64String);
+```
+
+Imports data from a Base64 encoded string.
+
+<ParamField path="base64String" type="const std::string&" required>
+  Base64 encoded string to decode
+</ParamField>
+
+**Throws:** `NFIQ2::Exception` if an invalid character is detected in the string.
+
+**Example:**
+```cpp
+NFIQ2::Data data;
+data.fromBase64String("SGVsbG8gV29ybGQh");
+```
+
+### toBase64String
+
+```cpp
+std::string toBase64String() const;
+```
+
+Generates a Base64 encoded string of the buffer.
+
+**Returns:** The content of the buffer as a Base64 encoded string.
+
+**Example:**
+```cpp
+std::string base64 = data.toBase64String();
+std::cout << "Base64: " << base64 << std::endl;
+```
+
+## Usage Example
+
+```cpp
+#include <nfiq2.hpp>
+
+// Reading binary data from file
+NFIQ2::Data imageData;
+imageData.readFromFile("fingerprint.raw");
+
+// Convert to base64 for transmission
+std::string encoded = imageData.toBase64String();
+
+// Later, decode back
+NFIQ2::Data decodedData;
+decodedData.fromBase64String(encoded);
+
+// Write to new file
+decodedData.writeToFile("fingerprint_copy.raw");
+```
+
+## Inherited Methods
+
+Since `Data` extends `std::basic_string<uint8_t>`, all standard string methods are available:
+
+- `size()` - Get the size of the data
+- `empty()` - Check if data is empty
+- `clear()` - Clear the data
+- `data()` - Get raw pointer to data
+- Standard iterators and operators
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="FingerprintImageData" icon="fingerprint" href="/api/fingerprint-image-data">
+    Extends Data for fingerprint images
+  </Card>
+  <Card title="Exception" icon="triangle-exclamation" href="/api/exceptions">
+    Error handling in NFIQ 2
+  </Card>
+</CardGroup>

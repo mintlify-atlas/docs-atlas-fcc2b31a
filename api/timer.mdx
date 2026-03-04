@@ -1,0 +1,171 @@
+---
+title: "Timer"
+description: "Performance measurement utility for timing internal operations"
+---
+
+## Overview
+
+The `NFIQ2::Timer` class provides a simple interface for measuring the execution time of operations. It's used internally by NFIQ 2 to track the computation speed of quality measure algorithms.
+
+## Class Definition
+
+```cpp
+namespace NFIQ2 {
+    class Timer {
+    public:
+        void start();
+        double getElapsedTime();
+        double stop();
+    };
+}
+```
+
+## Methods
+
+### start
+
+```cpp
+void start();
+```
+
+Starts the timer.
+
+<Note>
+  Calling `start()` resets any currently running timer, discarding previous timing data.
+</Note>
+
+**Example:**
+```cpp
+NFIQ2::Timer timer;
+timer.start();
+```
+
+### getElapsedTime
+
+```cpp
+double getElapsedTime();
+```
+
+Obtains the elapsed time since `start()` was called, without stopping the timer.
+
+**Returns:** Elapsed time in milliseconds.
+
+**Example:**
+```cpp
+timer.start();
+// ... perform operations ...
+double elapsed = timer.getElapsedTime();
+std::cout << "Elapsed: " << elapsed << " ms" << std::endl;
+// Timer is still running
+```
+
+### stop
+
+```cpp
+double stop();
+```
+
+Stops the timer and returns the elapsed time.
+
+**Returns:** Elapsed time in milliseconds since `start()` was called.
+
+**Example:**
+```cpp
+timer.start();
+// ... perform operations ...
+double totalTime = timer.stop();
+std::cout << "Total time: " << totalTime << " ms" << std::endl;
+```
+
+## Usage Examples
+
+### Basic Timing
+
+```cpp
+#include <nfiq2.hpp>
+
+NFIQ2::Timer timer;
+timer.start();
+
+// Compute quality score
+NFIQ2::Algorithm model;
+unsigned int score = model.computeUnifiedQualityScore(image);
+
+double computeTime = timer.stop();
+std::cout << "Quality score " << score 
+          << " computed in " << computeTime << " ms" << std::endl;
+```
+
+### Intermediate Timing
+
+```cpp
+NFIQ2::Timer timer;
+timer.start();
+
+// Stage 1
+processStep1();
+double stage1Time = timer.getElapsedTime();
+std::cout << "Stage 1: " << stage1Time << " ms" << std::endl;
+
+// Stage 2
+processStep2();
+double stage2Time = timer.getElapsedTime() - stage1Time;
+std::cout << "Stage 2: " << stage2Time << " ms" << std::endl;
+
+// Total
+double totalTime = timer.stop();
+std::cout << "Total: " << totalTime << " ms" << std::endl;
+```
+
+### Timing Multiple Operations
+
+```cpp
+NFIQ2::Timer timer;
+std::vector<double> timings;
+
+for (const auto& image : images) {
+    timer.start();
+    unsigned int score = model.computeUnifiedQualityScore(image);
+    timings.push_back(timer.stop());
+}
+
+// Calculate statistics
+double avgTime = std::accumulate(timings.begin(), timings.end(), 0.0) / timings.size();
+std::cout << "Average time per image: " << avgTime << " ms" << std::endl;
+```
+
+## Internal Usage
+
+The Timer class is used internally by quality measure algorithms to track computation speeds. You can access these timings through the `QualityMeasures` API:
+
+```cpp
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+
+// Get algorithm speeds in milliseconds
+auto speeds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+for (const auto& [algorithmID, speedMs] : speeds) {
+    std::cout << algorithmID << ": " << speedMs << " ms" << std::endl;
+}
+```
+
+## Performance Considerations
+
+<Tip>
+  The Timer uses `std::chrono::steady_clock` for monotonic time measurement, ensuring accurate results even if the system clock is adjusted.
+</Tip>
+
+- **Resolution**: Microsecond precision on most platforms
+- **Overhead**: Minimal (typically < 1 microsecond)
+- **Thread Safety**: Each Timer instance should be used by a single thread
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Quality Measure Algorithms" icon="gauge" href="/api/quality-measure-algorithms">
+    View algorithm computation speeds
+  </Card>
+  <Card title="Performance Guide" icon="rocket" href="/guides/quality-measures">
+    Optimize quality measure computation
+  </Card>
+</CardGroup>
