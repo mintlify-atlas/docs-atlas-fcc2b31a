@@ -1,0 +1,362 @@
+---
+title: 'Quality Measure Identifiers'
+description: 'String identifiers for quality measure algorithms, measures, and actionable feedback'
+---
+
+NFIQ 2 uses string identifiers to reference quality measure algorithms, individual quality measures, and actionable quality feedback values. These identifiers are defined in the `NFIQ2::Identifiers` namespace.
+
+## Functions
+
+Three functions retrieve all available identifiers as string vectors:
+
+### getActionableQualityFeedbackIDs
+
+```cpp
+std::vector<std::string> getActionableQualityFeedbackIDs();
+```
+
+Obtain all actionable quality feedback identifiers.
+
+<ResponseField name="return" type="std::vector<std::string>">
+  Vector of strings containing all actionable quality feedback identifiers. These correspond to constants in `NFIQ2::Identifiers::ActionableQualityFeedback`.
+</ResponseField>
+
+**Example:**
+```cpp
+#include <nfiq2_qualitymeasures.hpp>
+
+auto feedbackIds = NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs();
+
+for (const auto &id : feedbackIds) {
+    std::cout << "Feedback ID: " << id << std::endl;
+}
+```
+
+---
+
+### getNativeQualityMeasureAlgorithmIDs
+
+```cpp
+std::vector<std::string> getNativeQualityMeasureAlgorithmIDs();
+```
+
+Obtain all native quality measure algorithm identifiers.
+
+<ResponseField name="return" type="std::vector<std::string>">
+  Vector of strings with all quality measure algorithm identifiers. These correspond to constants in `NFIQ2::Identifiers::QualityMeasureAlgorithms`.
+</ResponseField>
+
+**Example:**
+```cpp
+auto algorithmIds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmIDs();
+
+std::cout << "Available quality measure algorithms:" << std::endl;
+for (const auto &id : algorithmIds) {
+    std::cout << "  - " << id << std::endl;
+}
+```
+
+---
+
+### getNativeQualityMeasureIDs
+
+```cpp
+std::vector<std::string> getNativeQualityMeasureIDs();
+```
+
+Obtain all quality measure identifiers from quality measure algorithms.
+
+<ResponseField name="return" type="std::vector<std::string>">
+  Vector of strings containing all quality measure identifiers. These correspond to constants in `NFIQ2::Identifiers::QualityMeasures` namespace and its sub-namespaces.
+</ResponseField>
+
+**Example:**
+```cpp
+auto measureIds = NFIQ2::QualityMeasures::getNativeQualityMeasureIDs();
+
+std::cout << "Total quality measures: " << measureIds.size() << std::endl;
+for (const auto &id : measureIds) {
+    std::cout << "  - " << id << std::endl;
+}
+```
+
+---
+
+## Identifier Reference
+
+### Quality Measure Algorithms
+
+Defined in `NFIQ2::Identifiers::QualityMeasureAlgorithms`:
+
+<ParamField path="FrequencyDomainAnalysis" type="string">
+  Identifier for the FrequencyDomainAnalysis quality measure algorithm. Analyzes the frequency of the sinusoid following the ridge-valley structure.
+</ParamField>
+
+<ParamField path="MinutiaeCount" type="string">
+  Identifier for the MinutiaeCount quality measure algorithm. Counts minutiae in the image using FingerJet FX OSE.
+</ParamField>
+
+<ParamField path="MinutiaeQuality" type="string">
+  Identifier for the MinutiaeQuality quality measure algorithm. Assesses quality characteristics of detected minutiae.
+</ParamField>
+
+<ParamField path="LocalClarity" type="string">
+  Identifier for the LocalClarity quality measure algorithm. Measures the clarity of ridge and valleys.
+</ParamField>
+
+<ParamField path="Contrast" type="string">
+  Identifier for the Contrast quality measure algorithm. Analyzes gray level contrast.
+</ParamField>
+
+<ParamField path="OrientationCertainty" type="string">
+  Identifier for the OrientationCertainty quality measure algorithm. Measures strength of energy concentration along dominant ridge flow.
+</ParamField>
+
+<ParamField path="OrientationFlow" type="string">
+  Identifier for the OrientationFlow quality measure algorithm. Assesses ridge flow continuity.
+</ParamField>
+
+<ParamField path="RegionOfInterestMean" type="string">
+  Identifier for the RegionOfInterestMean quality measure algorithm. Analyzes mean grayscale value of ROI.
+</ParamField>
+
+<ParamField path="RegionOfInterestCoherence" type="string">
+  Identifier for the RegionOfInterestCoherence quality measure algorithm. Measures coherence in the ROI.
+</ParamField>
+
+<ParamField path="RidgeValleyUniformity" type="string">
+  Identifier for the RidgeValleyUniformity quality measure algorithm. Measures consistency of ridge and valley widths.
+</ParamField>
+
+---
+
+### Actionable Quality Feedback
+
+Defined in `NFIQ2::Identifiers::ActionableQualityFeedback`:
+
+<ParamField path="EmptyImageOrContrastTooLow" type="string">
+  The image is blank or the contrast is too low. The mean gray level appears white.
+  
+  **Threshold:** Compare against `NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow`
+</ParamField>
+
+<ParamField path="UniformImage" type="string">
+  Standard deviation of gray levels in image indicates uniformity (lack of variation).
+  
+  **Threshold:** Compare against `NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage`
+</ParamField>
+
+<ParamField path="FingerprintImageWithMinutiae" type="string">
+  Number of minutiae in the image. Equivalent to the minutiae count quality measure.
+  
+  **Threshold:** Compare against `NFIQ2::Thresholds::ActionableQualityFeedback::FingerprintImageWithMinutiae`
+  
+  **Note:** Equivalent to `QualityMeasures::Algorithms::Minutiae::Count`
+</ParamField>
+
+<ParamField path="SufficientFingerprintForeground" type="string">
+  Number of pixels in the computed foreground (region of interest).
+  
+  **Threshold:** Compare against `NFIQ2::Thresholds::ActionableQualityFeedback::SufficientFingerprintForeground`
+</ParamField>
+
+---
+
+### Quality Measures
+
+Defined in `NFIQ2::Identifiers::QualityMeasures` and sub-namespaces. Quality measures are organized by algorithm:
+
+<AccordionGroup>
+  <Accordion title="FrequencyDomainAnalysis" icon="wave-square">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::FrequencyDomainAnalysis`
+    
+    - `Mean` - Mean of local quality value
+    - `StdDev` - Standard deviation of local quality values
+    - `Histogram::Bin0` through `Histogram::Bin9` - Ten histogram bin boundaries
+  </Accordion>
+
+  <Accordion title="Minutiae" icon="fingerprint">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::Minutiae`
+    
+    - `Count` - Number of minutiae in the image
+    - `CountCOM` - Number of minutiae in 200x200 pixel rectangle centered at center of mass
+    - `PercentImageMean50` - Percentage of minutiae with quality value (by Contrast::Mean) between 0-0.5
+    - `PercentOrientationCertainty80` - Percentage of minutiae with orientation certainty level above 80
+  </Accordion>
+
+  <Accordion title="RegionOfInterest" icon="crop">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::RegionOfInterest`
+    
+    - `Mean` - Mean grayscale value of local regions with at least 1 pixel in ROI
+    - `CoherenceSum` - Sum of coherence values over all local regions within ROI
+    - `CoherenceMean` - Average coherence (CoherenceSum divided by number of local regions in ROI)
+  </Accordion>
+
+  <Accordion title="LocalClarity" icon="eye">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::LocalClarity`
+    
+    - `Mean` - Mean of local quality value
+    - `StdDev` - Standard deviation of local quality values
+    - `Histogram::Bin0` through `Histogram::Bin9` - Ten histogram bin boundaries
+  </Accordion>
+
+  <Accordion title="Contrast" icon="circle-half-stroke">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::Contrast`
+    
+    - `ImageMean` - Arithmetic mean of the image (MU)
+    - `MeanOfBlockMeans` - Arithmetic mean of per-block means (MMB)
+  </Accordion>
+
+  <Accordion title="OrientationCertainty" icon="compass">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::OrientationCertainty`
+    
+    - `Mean` - Mean of local quality value
+    - `StdDev` - Standard deviation of local quality values
+    - `Histogram::Bin0` through `Histogram::Bin9` - Ten histogram bin boundaries
+  </Accordion>
+
+  <Accordion title="OrientationFlow" icon="arrows-rotate">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::OrientationFlow`
+    
+    - `Mean` - Mean of local quality value
+    - `StdDev` - Standard deviation of local quality values
+    - `Histogram::Bin0` through `Histogram::Bin9` - Ten histogram bin boundaries
+  </Accordion>
+
+  <Accordion title="RidgeValleyUniformity" icon="bars">
+    **Namespace:** `NFIQ2::Identifiers::QualityMeasures::RidgeValleyUniformity`
+    
+    - `Mean` - Mean of local quality value
+    - `StdDev` - Standard deviation of local quality values
+    - `Histogram::Bin0` through `Histogram::Bin9` - Ten histogram bin boundaries
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Usage Examples
+
+### Listing All Identifiers
+
+```cpp
+#include <nfiq2_qualitymeasures.hpp>
+#include <iostream>
+
+int main() {
+    // List all quality measure algorithms
+    auto algorithms = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmIDs();
+    std::cout << "Quality Measure Algorithms (" << algorithms.size() << "):" << std::endl;
+    for (const auto &id : algorithms) {
+        std::cout << "  - " << id << std::endl;
+    }
+    
+    // List all quality measures
+    auto measures = NFIQ2::QualityMeasures::getNativeQualityMeasureIDs();
+    std::cout << "\nQuality Measures (" << measures.size() << "):" << std::endl;
+    for (const auto &id : measures) {
+        std::cout << "  - " << id << std::endl;
+    }
+    
+    // List all actionable feedback
+    auto feedback = NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs();
+    std::cout << "\nActionable Feedback (" << feedback.size() << "):" << std::endl;
+    for (const auto &id : feedback) {
+        std::cout << "  - " << id << std::endl;
+    }
+    
+    return 0;
+}
+```
+
+### Validating Identifiers
+
+```cpp
+// Check if a specific identifier is valid
+std::string targetId = "FrequencyDomainAnalysis";
+auto algorithmIds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmIDs();
+
+if (std::find(algorithmIds.begin(), algorithmIds.end(), targetId) != algorithmIds.end()) {
+    std::cout << targetId << " is a valid algorithm identifier" << std::endl;
+} else {
+    std::cerr << targetId << " is not a valid algorithm identifier" << std::endl;
+}
+```
+
+### Using Identifiers to Access Values
+
+```cpp
+NFIQ2::FingerprintImageData image(data, size, width, height, 0, 500);
+
+// Compute quality measures
+auto measures = NFIQ2::QualityMeasures::computeNativeQualityMeasures(image);
+
+// Access specific measures using constant identifiers
+if (measures.find("OrientationCertainty_Mean") != measures.end()) {
+    double ocMean = measures["OrientationCertainty_Mean"];
+    std::cout << "Orientation Certainty Mean: " << ocMean << std::endl;
+}
+
+// Compute actionable feedback
+auto feedback = NFIQ2::QualityMeasures::computeActionableQualityFeedback(image);
+
+// Check actionable feedback values
+for (const auto &id : NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs()) {
+    if (feedback.find(id) != feedback.end()) {
+        std::cout << id << ": " << feedback[id] << std::endl;
+    }
+}
+```
+
+### Generating Reports
+
+```cpp
+// Generate comprehensive quality report
+NFIQ2::FingerprintImageData image(data, size, width, height, 0, 500);
+
+auto measures = NFIQ2::QualityMeasures::computeNativeQualityMeasures(image);
+auto feedback = NFIQ2::QualityMeasures::computeActionableQualityFeedback(image);
+
+std::cout << "=== Quality Measures Report ===" << std::endl;
+for (const auto &id : NFIQ2::QualityMeasures::getNativeQualityMeasureIDs()) {
+    if (measures.find(id) != measures.end()) {
+        std::cout << id << ": " << measures[id] << std::endl;
+    }
+}
+
+std::cout << "\n=== Actionable Feedback ===" << std::endl;
+for (const auto &id : NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs()) {
+    if (feedback.find(id) != feedback.end()) {
+        std::cout << id << ": " << feedback[id] << std::endl;
+    }
+}
+```
+
+---
+
+## Constants Reference
+
+For the actual string constant values and C++ namespace structure, refer to:
+
+- **Header file:** `nfiq2_constants.hpp`
+- **Namespace:** `NFIQ2::Identifiers`
+- **Sub-namespaces:**
+  - `NFIQ2::Identifiers::QualityMeasureAlgorithms`
+  - `NFIQ2::Identifiers::QualityMeasures`
+  - `NFIQ2::Identifiers::ActionableQualityFeedback`
+
+<Tip>
+  Use the getter functions (`getActionableQualityFeedbackIDs()`, `getNativeQualityMeasureAlgorithmIDs()`, `getNativeQualityMeasureIDs()`) to programmatically discover available identifiers at runtime.
+</Tip>
+
+---
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Quality Measures" icon="chart-mixed" href="/api/quality-measures">
+    Core functions for computing quality measures
+  </Card>
+  <Card title="Quality Measure Algorithms" icon="gear" href="/api/quality-measure-algorithms">
+    Learn about the Algorithm class and related functions
+  </Card>
+</CardGroup>

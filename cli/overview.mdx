@@ -1,0 +1,272 @@
+---
+title: 'CLI Tool Overview'
+description: 'Learn about the NFIQ2 command-line interface for batch fingerprint quality assessment'
+---
+
+## What is the NFIQ2 CLI?
+
+The NFIQ2 command-line interface (`nfiq2`) is a standalone executable tool for computing ISO/IEC 29794-4:2024 unified quality scores for **500 PPI** ink and live scan plain impression fingerprint images. It serves as a reference implementation of the international standard and provides a fast, efficient way to assess fingerprint image quality from the terminal.
+
+### Key Features
+
+- **Batch Processing**: Process multiple images, directories, or RecordStores in a single command
+- **Multi-threading**: Utilize multiple CPU cores for faster processing of large datasets
+- **Multiple Input Formats**: Support for common image formats (BMP, JPEG, PNG, TIFF, WSQ, etc.) and biometric standards
+- **CSV Output**: Machine-readable output format for easy integration with data pipelines
+- **Quality Feedback**: Optional actionable feedback and detailed quality metrics
+- **Flexible Configuration**: Custom model parameters and output options
+
+<Note>
+The CLI tool outputs scores in CSV format by default, making it ideal for batch processing and automated workflows.
+</Note>
+
+## When to Use the CLI vs. Library
+
+### Use the CLI Tool When:
+
+- **Batch processing** multiple fingerprint images
+- Processing entire directories or RecordStores
+- Running quality checks from scripts or automation pipelines
+- Performing one-time quality assessments
+- Testing or evaluating NFIQ2 capabilities
+- You need CSV output for downstream analysis
+
+### Use the Library When:
+
+- Integrating NFIQ2 into your own application
+- Building real-time quality assessment systems
+- You need programmatic access to quality features
+- Custom integration with your existing codebase
+- Mobile or embedded platform deployment
+- You require fine-grained control over the quality assessment process
+
+<Tip>
+For development and testing, the CLI tool is faster to get started with. For production systems that need to integrate quality assessment into an application workflow, use the library API.
+</Tip>
+
+## Supported Input Formats
+
+The NFIQ2 CLI supports a wide range of input formats:
+
+<CardGroup cols={2}>
+  <Card title="Image Formats" icon="image">
+    - BMP
+    - JPEG / JPEG-LS
+    - JPEG 2000
+    - PBM/PGM/PPM
+    - PNG
+    - TIFF
+    - WSQ
+  </Card>
+  
+  <Card title="Biometric Standards" icon="fingerprint">
+    - ANSI/NIST-ITL 1-2007+ (Type 14)
+    - ISO/IEC 19794-4
+    - Biometric Evaluation Framework RecordStores
+  </Card>
+</CardGroup>
+
+## Image Requirements
+
+<Warning>
+NFIQ2 has specific requirements for input images. Images that don't meet these requirements can be automatically processed with the `-F` (Force) flag.
+</Warning>
+
+### Required Specifications
+
+| Requirement | Value | Notes |
+|------------|-------|-------|
+| **Resolution** | 500 PPI | Can be resampled automatically with `-F` |
+| **Color Depth** | 8-bit grayscale | Maximum 255 shades of gray |
+| **Width** | 196-800 pixels | After whitespace cropping |
+| **Height** | 196-1000 pixels | After whitespace cropping |
+
+### Automatic Processing
+
+When using the `-F` (Force) flag, NFIQ2 will automatically:
+- **Quantize** images with incorrect bit depth to 8-bit grayscale
+- **Resample** images to 500 PPI when source resolution is known
+- **Assume** 500 PPI if resolution cannot be determined
+
+## Building the CLI Tool
+
+<Warning>
+Unless you are actively developing NFIQ2, we highly recommend downloading pre-built binaries from [GitHub Releases](https://github.com/usnistgov/NFIQ2/releases) instead of building from source.
+</Warning>
+
+### Prerequisites
+
+Building the CLI requires additional dependencies beyond the library:
+
+<Steps>
+  <Step title="Core Dependencies">
+    - CMake 3.3 or higher
+    - C++11 compatible compiler
+    - Git (for submodule cloning)
+  </Step>
+  
+  <Step title="Library Dependencies">
+    - OpenCV 4 (bundled as submodule)
+    - FingerJetFX OSE (bundled as submodule)
+    - digestpp (bundled as submodule)
+  </Step>
+  
+  <Step title="CLI-Specific Dependencies">
+    - [Biometric Evaluation Framework](https://github.com/usnistgov/libbiomeval) (bundled as submodule)
+    - [NIST Fingerprint Image Resampler](https://github.com/usnistgov/nfir) (bundled as submodule)
+    - Additional system packages (see libbiomeval README)
+  </Step>
+</Steps>
+
+### Build Instructions
+
+<Note>
+You must recursively clone the repository to retrieve all git submodules. Do not use the GitHub ZIP file download.
+</Note>
+
+<CodeGroup>
+```bash Linux/macOS
+# Clone repository with submodules
+git clone --recursive https://github.com/usnistgov/NFIQ2.git
+cd NFIQ2
+
+# Install libbiomeval dependencies (Ubuntu/Debian example)
+sudo apt-get install libdb++-dev libsqlite3-dev \
+  libjpeg-dev libpng-dev libtiff-dev libopenjp2-7-dev \
+  zlib1g-dev libssl-dev
+
+# Create build directory
+mkdir build && cd build
+
+# Configure with CLI enabled (default)
+cmake ..
+
+# Build
+cmake --build .
+```
+
+```bash Windows (Visual Studio)
+# Clone repository with submodules
+git clone --recursive https://github.com/usnistgov/NFIQ2.git
+cd NFIQ2
+
+# Install dependencies via vcpkg
+vcpkg install berkeleydb:x64-windows-static sqlite3:x64-windows-static ^^
+  libjpeg-turbo:x64-windows-static libpng:x64-windows-static ^^
+  tiff:x64-windows-static openjpeg:x64-windows-static ^^
+  zlib:x64-windows-static openssl:x64-windows-static
+
+# Create build directory
+mkdir build && cd build
+
+# Configure with vcpkg toolchain
+cmake .. -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static ^^
+  -DCMAKE_CONFIGURATION_TYPES=Release -A x64
+
+# Build
+cmake --build . --config Release
+```
+
+```bash macOS Universal Binary
+# Clone repository with submodules
+git clone --recursive https://github.com/usnistgov/NFIQ2.git
+cd NFIQ2
+
+# Install dependencies via MacPorts (with universal variants)
+sudo port install db62 +universal sqlite3 +universal \
+  jpeg +universal libpng +universal tiff +universal \
+  openjpeg +universal zlib +universal openssl +universal
+
+# Create build directory
+mkdir build && cd build
+
+# Configure for universal binary
+CMAKE_OSX_ARCHITECTURES="x86_64;arm64" cmake ..
+
+# Build
+cmake --build .
+```
+</CodeGroup>
+
+### Build Options
+
+Control the build with these CMake options:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `BUILD_NFIQ2_CLI` | `ON` | Build the command-line interface |
+| `EMBED_RANDOM_FOREST_PARAMETERS` | `OFF` | Embed model parameters into the library |
+| `EMBEDDED_RANDOM_FOREST_PARAMETER_FCT` | `0` | Friction ridge capture technology code for embedded parameters |
+
+<Tabs>
+  <Tab title="Build Library Only">
+    ```bash
+    cmake .. -DBUILD_NFIQ2_CLI=OFF
+    cmake --build .
+    ```
+  </Tab>
+  
+  <Tab title="Build with Embedded Parameters">
+    ```bash
+    cmake .. -DEMBED_RANDOM_FOREST_PARAMETERS=ON \
+      -DEMBEDDED_RANDOM_FOREST_PARAMETER_FCT=0
+    cmake --build .
+    ```
+  </Tab>
+  
+  <Tab title="Custom Build Type">
+    ```bash
+    cmake .. -DCMAKE_BUILD_TYPE=Debug
+    cmake --build .
+    ```
+  </Tab>
+</Tabs>
+
+## Installation
+
+After building, the `nfiq2` executable will be located in the build directory:
+
+- **Linux/macOS**: `build/bin/nfiq2`
+- **Windows**: `build\bin\Release\nfiq2.exe`
+
+You can install it system-wide using:
+
+```bash
+# Linux/macOS
+sudo cmake --install .
+
+# This installs to /usr/local/nfiq2/bin/nfiq2
+# A symlink is created at /usr/local/bin/nfiq2
+```
+
+<Tip>
+On Linux/macOS, the installer creates a symlink at `/usr/local/bin/nfiq2` for easy access from anywhere.
+</Tip>
+
+## Quick Start
+
+Once installed or built, test the CLI tool:
+
+```bash
+# Process a single image
+./nfiq2 fingerprint.png
+
+# Process multiple images with verbose output
+./nfiq2 -v image1.png image2.wsq image3.tif
+
+# Process a directory with multi-threading
+./nfiq2 -j 4 /path/to/fingerprints/
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Usage Guide" icon="terminal" href="/cli/usage">
+    Learn about command-line options and syntax
+  </Card>
+  
+  <Card title="Examples" icon="code" href="/cli/examples">
+    See real-world usage examples with output
+  </Card>
+</CardGroup>

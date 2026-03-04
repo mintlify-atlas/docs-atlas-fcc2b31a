@@ -1,0 +1,530 @@
+---
+title: 'Native Quality Measures'
+description: 'Documentation of NFIQ2 native quality measures including FDA, LCS, Mu, OCL, and others'
+icon: 'microscope'
+---
+
+## Overview
+
+NFIQ2 computes **native quality measures** that assess specific characteristics of fingerprint images. These measures analyze various aspects of ridge structure, clarity, orientation, and contrast. The random forest model combines these measures to produce unified quality scores.
+
+<Info>
+Native quality measures are the building blocks of NFIQ2's quality assessment. Each measure captures a different dimension of fingerprint image quality.
+</Info>
+
+## Quality Measure Categories
+
+NFIQ2 organizes quality measures into several categories:
+
+### Quality Measure Algorithms
+
+High-level algorithms that compute one or more related measures:
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasureAlgorithms {
+    extern const char FrequencyDomainAnalysis[];     // FDA algorithm
+    extern const char MinutiaeCount[];               // Minutiae counting
+    extern const char MinutiaeQuality[];             // Minutiae-based quality
+    extern const char LocalClarity[];                // LCS algorithm
+    extern const char Contrast[];                    // Image contrast (Mu)
+    extern const char OrientationCertainty[];        // OCL algorithm
+    extern const char OrientationFlow[];             // OF algorithm
+    extern const char RegionOfInterestMean[];        // ROI mean
+    extern const char RegionOfInterestCoherence[];   // ROI coherence
+    extern const char RidgeValleyUniformity[];       // RVUP algorithm
+}
+```
+
+### Computing All Native Quality Measures
+
+```cpp
+#include <nfiq2.hpp>
+
+// Compute all native quality measures
+auto nativeQualityMeasures = 
+    NFIQ2::QualityMeasures::computeNativeQualityMeasures(fingerprintImage);
+
+// Access individual measures by identifier
+double fdaMean = nativeQualityMeasures["FrequencyDomainAnalysis_Mean"];
+double lcsStdDev = nativeQualityMeasures["LocalClarity_StdDev"];
+double muValue = nativeQualityMeasures["Contrast_ImageMean"];
+
+// Get list of all available measure IDs
+std::vector<std::string> measureIDs = 
+    NFIQ2::QualityMeasures::getNativeQualityMeasureIDs();
+```
+
+## Frequency Domain Analysis (FDA)
+
+**Purpose**: Measures the frequency of the sinusoid following the ridge-valley structure.
+
+### Implementation Details
+
+```cpp
+namespace NFIQ2::QualityMeasures {
+    class FDA : public Algorithm {
+    public:
+        FDA(const NFIQ2::FingerprintImageData &fingerprintImage);
+        std::string getName() const override;
+        static std::vector<std::string> getNativeQualityMeasureIDs();
+    };
+}
+```
+
+### Quality Measures Produced
+
+<Tabs>
+  <Tab title="Mean and StdDev">
+    ```cpp
+    // Access FDA mean and standard deviation
+    double fdaMean = measures["FrequencyDomainAnalysis_Mean"];
+    double fdaStdDev = measures["FrequencyDomainAnalysis_StdDev"];
+    ```
+    
+    - **Mean**: Average frequency domain quality across local regions
+    - **StdDev**: Variability in frequency domain quality
+  </Tab>
+  
+  <Tab title="Histogram Bins">
+    ```cpp
+    // Access FDA histogram bins (10 bins total)
+    for (int i = 0; i < 10; i++) {
+        std::string binKey = "FrequencyDomainAnalysis_Histogram_Bin" + std::to_string(i);
+        double binValue = measures[binKey];
+    }
+    ```
+    
+    **Histogram Boundaries** (defined in `FDA.h:18`):
+    ```cpp
+    static double FDAHISTLIMITS[9] = { 
+        0.268, 0.304, 0.33, 0.355, 0.38, 0.407, 0.44, 0.50, 1.0 
+    };
+    ```
+  </Tab>
+</Tabs>
+
+### What FDA Measures
+
+- Ridge-valley alternation frequency consistency
+- Local region quality based on spectral analysis
+- Deviation from expected fingerprint periodicity
+
+<Note>
+FDA operates on 32×32 pixel local regions, rotated to align ridges vertically (16×32 after rotation). This alignment improves frequency analysis accuracy.
+</Note>
+
+## Local Clarity Score (LCS)
+
+**Purpose**: Measures the clarity and sharpness of ridge and valley structures.
+
+### Implementation
+
+```cpp
+namespace NFIQ2::QualityMeasures {
+    class LCS : public Algorithm {
+    public:
+        LCS(const NFIQ2::FingerprintImageData &fingerprintImage);
+        static std::vector<std::string> getNativeQualityMeasureIDs();
+    };
+}
+```
+
+### Quality Measures Produced
+
+```cpp
+// Mean and standard deviation
+double lcsMean = measures["LocalClarity_Mean"];
+double lcsStdDev = measures["LocalClarity_StdDev"];
+
+// Histogram bins (10 bins)
+for (int i = 0; i < 10; i++) {
+    std::string binKey = "LocalClarity_Histogram_Bin" + std::to_string(i);
+    double binValue = measures[binKey];
+}
+```
+
+**Histogram Boundaries** (from `LCS.h:13`):
+```cpp
+static double LCSHISTLIMITS[9] = { 
+    0.0, 0.70, 0.74, 0.77, 0.79, 0.81, 0.83, 0.85, 0.87 
+};
+```
+
+### What LCS Measures
+
+- Ridge edge sharpness and definition
+- Valley depth and clarity
+- Overall crispness of ridge-valley transitions
+
+## Contrast (Mu)
+
+**Purpose**: Measures gray level distribution and image contrast.
+
+### Implementation
+
+```cpp
+namespace NFIQ2::QualityMeasures {
+    class Mu : public Algorithm {
+    public:
+        Mu(const NFIQ2::FingerprintImageData &fingerprintImage);
+        double getSigma() const;  // Standard deviation of gray levels
+    };
+}
+```
+
+### Quality Measures Produced
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::Contrast {
+    extern const char ImageMean[];          // "Contrast_ImageMean" (MU)
+    extern const char MeanOfBlockMeans[];   // "Contrast_MeanOfBlockMeans" (MMB)
+}
+
+// Access contrast measures
+double mu = measures["Contrast_ImageMean"];          // Overall image mean
+double mmb = measures["Contrast_MeanOfBlockMeans"]; // Average of block means
+```
+
+### What Mu Measures
+
+<AccordionGroup>
+  <Accordion title="ImageMean (MU)">
+    **Arithmetic mean** of all pixel gray levels in the image.
+    
+    - Values near 255: Image may be overexposed or blank
+    - Values near 0: Image may be underexposed
+    - Values near 127: Optimal contrast range
+  </Accordion>
+  
+  <Accordion title="MeanOfBlockMeans (MMB)">
+    **Arithmetic mean of per-block means** across the image.
+    
+    Provides insight into local contrast variations:
+    - Similar to MU: Uniform contrast across image
+    - Different from MU: Non-uniform contrast distribution
+  </Accordion>
+</AccordionGroup>
+
+## Orientation Certainty Level (OCL)
+
+**Purpose**: Measures the strength of energy concentration along the dominant ridge flow orientation.
+
+### Implementation
+
+```cpp
+namespace NFIQ2::QualityMeasures {
+    class OCLHistogram : public Algorithm {
+    public:
+        OCLHistogram(const NFIQ2::FingerprintImageData &fingerprintImage);
+        
+        // Compute OCL for a single block
+        static bool getOCLValueOfBlock(const cv::Mat &block, double &ocl);
+    };
+}
+```
+
+### Quality Measures Produced
+
+```cpp
+// Mean and standard deviation
+double oclMean = measures["OrientationCertainty_Mean"];
+double oclStdDev = measures["OrientationCertainty_StdDev"];
+
+// Histogram bins (10 bins)
+for (int i = 0; i < 10; i++) {
+    std::string binKey = "OrientationCertainty_Histogram_Bin" + std::to_string(i);
+    double binValue = measures[binKey];
+}
+```
+
+**Histogram Boundaries** (from `OCLHistogram.h:16`):
+```cpp
+static double OCLPHISTLIMITS[9] = { 
+    0.337, 0.479, 0.579, 0.655, 0.716, 0.766, 0.81, 0.852, 0.898 
+};
+```
+
+### What OCL Measures
+
+- **Ridge flow coherence**: How consistently ridges flow in one direction
+- **Structure quality**: Strong OCL indicates well-defined ridge structure
+- **Noise and artifacts**: Low OCL may indicate smudging or poor capture
+
+<Info>
+OCL is particularly sensitive to pressure variations during capture. Overcompression can create artificial high OCL values, while undercompression reduces OCL.
+</Info>
+
+## Orientation Flow (OF)
+
+**Purpose**: Measures ridge flow continuity based on orientation differences in neighboring blocks.
+
+### Implementation
+
+```cpp
+namespace NFIQ2::QualityMeasures {
+    class OF : public Algorithm {
+    public:
+        OF(const NFIQ2::FingerprintImageData &fingerprintImage);
+        
+        // Minimum angle change for inclusion in quality measure
+        static constexpr double angleMin { 4.0 };
+    };
+}
+```
+
+### Quality Measures Produced
+
+```cpp
+// Mean and standard deviation
+double ofMean = measures["OrientationFlow_Mean"];
+double ofStdDev = measures["OrientationFlow_StdDev"];
+
+// Histogram bins (10 bins)
+for (int i = 0; i < 10; i++) {
+    std::string binKey = "OrientationFlow_Histogram_Bin" + std::to_string(i);
+    double binValue = measures[binKey];
+}
+```
+
+**Histogram Boundaries** (from `OF.h:19`):
+```cpp
+static double OFHISTLIMITS[9] = { 
+    1.715e-2, 3.5e-2, 5.57e-2, 8.1e-2, 1.15e-1, 
+    1.718e-1, 2.569e-1, 4.758e-1, 7.48e-1 
+};
+```
+
+### What OF Measures
+
+- **Flow continuity**: Smooth orientation changes indicate good quality
+- **Abrupt changes**: Large orientation differences suggest noise or damage
+- **Pattern consistency**: Used to detect scars, creases, or dry fingers
+
+## Ridge-Valley Uniformity (RVUP)
+
+**Purpose**: Measures the consistency of ridge and valley widths.
+
+### Implementation
+
+```cpp
+namespace NFIQ2::QualityMeasures {
+    class RVUPHistogram : public Algorithm {
+    public:
+        RVUPHistogram(const NFIQ2::FingerprintImageData &fingerprintImage);
+    };
+}
+```
+
+### Quality Measures Produced
+
+```cpp
+// Mean and standard deviation
+double rvupMean = measures["RidgeValleyUniformity_Mean"];
+double rvupStdDev = measures["RidgeValleyUniformity_StdDev"];
+
+// Histogram bins (10 bins)
+for (int i = 0; i < 10; i++) {
+    std::string binKey = "RidgeValleyUniformity_Histogram_Bin" + std::to_string(i);
+    double binValue = measures[binKey];
+}
+```
+
+**Histogram Boundaries** (from `RVUPHistogram.h:13`):
+```cpp
+static double RVUPHISTLIMITS[9] = { 
+    0.5, 0.667, 0.8, 1.0, 1.25, 1.5, 2.0, 24.0, 30.0 
+};
+```
+
+### What RVUP Measures
+
+- **Width consistency**: Uniform ridge/valley widths indicate good quality
+- **Pressure artifacts**: Inconsistent widths suggest over/under pressure
+- **Resolution issues**: Extreme variations may indicate scaling problems
+
+## Minutiae-Based Measures
+
+**Purpose**: Analyzes detected minutiae characteristics and distribution.
+
+### Quality Measures Produced
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::Minutiae {
+    extern const char Count[];                          // Total minutiae count
+    extern const char CountCOM[];                       // Count in center of mass
+    extern const char PercentImageMean50[];             // % with good local contrast
+    extern const char PercentOrientationCertainty80[];  // % with good local OCL
+}
+
+// Access minutiae measures
+double minutiaeCount = measures["Minutiae_Count"];
+double minutiaeCOM = measures["Minutiae_CountCOM"];
+double percentMean = measures["Minutiae_PercentImageMean50"];
+double percentOCL = measures["Minutiae_PercentOrientationCertainty80"];
+```
+
+### Minutiae Measure Details
+
+<Tabs>
+  <Tab title="Count">
+    Total number of minutiae detected by the FingerJet FX OSE feature extractor.
+    
+    **Typical Ranges**:
+    - Good quality: 40-80 minutiae
+    - Poor quality: < 20 minutiae
+    - Possible artifacts: > 100 minutiae
+  </Tab>
+  
+  <Tab title="CountCOM">
+    Number of minutiae in a 200×200 pixel rectangle centered at the center of mass of all minutiae.
+    
+    **Purpose**: Measures central region concentration
+    - High: Minutiae well-distributed in center
+    - Low: Sparse or edge-biased distribution
+  </Tab>
+  
+  <Tab title="PercentImageMean50">
+    Percentage of minutiae where local region contrast (Mu) is between 0-0.5.
+    
+    **Interpretation**:
+    - High percentage: Minutiae in well-contrasted regions
+    - Low percentage: Minutiae in poor contrast areas
+  </Tab>
+  
+  <Tab title="PercentOrientationCertainty80">
+    Percentage of minutiae where local OCL value exceeds 80.
+    
+    **Interpretation**:
+    - High percentage: Minutiae in regions with clear ridge flow
+    - Low percentage: Minutiae in noisy or uncertain regions
+  </Tab>
+</Tabs>
+
+## Region of Interest (ROI) Measures
+
+**Purpose**: Analyzes characteristics of the detected foreground region.
+
+### Quality Measures Produced
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::RegionOfInterest {
+    extern const char Mean[];          // ROI mean gray level
+    extern const char CoherenceSum[];  // Sum of coherence values
+    extern const char CoherenceMean[]; // Average coherence in ROI
+}
+
+// Access ROI measures
+double roiMean = measures["RegionOfInterest_Mean"];
+double cohSum = measures["RegionOfInterest_CoherenceSum"];
+double cohMean = measures["RegionOfInterest_CoherenceMean"];
+```
+
+### What ROI Measures Track
+
+- **Mean**: Average gray level in foreground (should be well-centered in dynamic range)
+- **CoherenceSum**: Total orientation coherence across ROI blocks
+- **CoherenceMean**: Average coherence per block (CoherenceSum / number of ROI blocks)
+
+## Extracting Quality Measure Details
+
+### Getting Algorithm Objects
+
+```cpp
+// Get algorithm objects (includes timing and detailed info)
+auto algorithms = 
+    NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(fingerprintImage);
+
+// Access as map for easier lookup
+auto algorithmMap = 
+    NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithms(algorithms);
+
+// Get specific algorithm
+auto fdaAlgorithm = algorithmMap["FrequencyDomainAnalysis"];
+std::cout << "FDA computed in " << fdaAlgorithm->getSpeed() << " ms" << std::endl;
+
+// Get measures from specific algorithm
+auto fdaMeasures = fdaAlgorithm->getFeatures();
+```
+
+### Performance Timing
+
+```cpp
+// Get computation speeds for all algorithms
+auto speeds = 
+    NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+for (const auto& [algorithmId, speedMs] : speeds) {
+    std::cout << algorithmId << ": " << speedMs << " ms" << std::endl;
+}
+```
+
+## Local Region Processing
+
+Most quality measures operate on local regions:
+
+```cpp
+namespace NFIQ2::Sizes {
+    // Standard local region size (ISO/IEC 29794-4:202X, Section 5.1.2)
+    const unsigned int LocalRegionSquare { 32 };  // 32×32 pixels
+    
+    // After rotation to align ridges vertically
+    const unsigned int VerticallyAlignedLocalRegionWidth { 32 };
+    const unsigned int VerticallyAlignedLocalRegionHeight { 16 };
+}
+```
+
+<Note>
+**Why 32×32 pixels?** Per ISO/IEC 29794-4:2024, Section 5.1.2: "The size for each local region shall be 32 × 32 pixels, which is sufficient to cover 2 clear ridges" at 500 PPI.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Select Relevant Measures">
+    Not all applications need all measures. Choose based on your needs:
+    
+    - **Fast screening**: Use Mu, minutiae count, and ROI mean
+    - **Quality prediction**: Use full set for unified quality scores
+    - **Forensic analysis**: Include all measures plus histogram distributions
+  </Accordion>
+  
+  <Accordion title="Monitor Measure Distributions">
+    Track measure distributions over time to:
+    - Detect sensor calibration drift
+    - Identify environmental factors (temperature, humidity)
+    - Optimize capture settings
+  </Accordion>
+  
+  <Accordion title="Understand Measure Correlations">
+    Some measures are correlated:
+    - FDA and LCS often move together
+    - OCL and OF reflect related aspects
+    - Mu affects minutiae-based percentages
+    
+    The random forest accounts for these correlations.
+  </Accordion>
+  
+  <Accordion title="Validate Against Ground Truth">
+    When tuning capture systems:
+    - Compare measures to actual match performance
+    - Identify which measures best predict problems in your specific environment
+    - Adjust capture guidance based on measure feedback
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Unified Quality Scores" icon="chart-line" href="/concepts/quality-scores">
+    Learn how measures combine into quality scores
+  </Card>
+  <Card title="Actionable Feedback" icon="comments" href="/concepts/actionable-feedback">
+    Use measures to provide capture guidance
+  </Card>
+  <Card title="Random Forest Model" icon="brain" href="/concepts/random-forest-model">
+    Understand how the ML model weights measures
+  </Card>
+  <Card title="Quality Measures API" icon="code" href="/api/quality-measures">
+    Complete API documentation
+  </Card>
+</CardGroup>

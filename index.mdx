@@ -1,97 +1,309 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "NFIQ 2 Documentation"
+description: "ISO/IEC 29794-4 compliant fingerprint image quality assessment library"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#1a1d27] via-[#0f1117] to-[#1a1d27] dark:from-[#1a1d27] dark:via-[#0f1117] dark:to-[#1a1d27] py-20 px-4 sm:px-6 lg:px-8">
+  <div className="max-w-7xl mx-auto">
+    <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white dark:text-white mb-6">
+          Fingerprint Quality Assessment for Biometric Systems
+        </h1>
+        <p className="text-lg sm:text-xl text-gray-300 dark:text-gray-300 max-w-2xl mb-8">
+          NFIQ 2 is the NIST Fingerprint Image Quality assessment library, implementing the ISO/IEC 29794-4 international standard for unified quality scoring of 500 PPI fingerprint images.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 text-base font-semibold text-white bg-[#7c7c7c] hover:bg-[#6a6a6a] rounded-lg transition-colors no-underline"
+          >
+            Get Started
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a
+            href="/api/algorithm"
+            className="inline-flex items-center px-6 py-3 text-base font-semibold text-white border border-white/30 bg-white/10 hover:bg-white/20 rounded-lg transition-colors no-underline"
+          >
+            API Reference
+          </a>
+        </div>
+      </div>
+      <div className="hidden lg:block lg:col-span-5 mt-12 lg:mt-0">
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#7c7c7c]/20 rounded-2xl blur-3xl"></div>
+          <div className="relative bg-[#242838] dark:bg-[#242838] rounded-2xl p-6 border border-[#27272a] dark:border-[#27272a]">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <pre className="text-sm text-gray-300 dark:text-gray-300">
+              <code>{`#include <nfiq2.hpp>
 
-Get your documentation site up and running in minutes.
+// Initialize NFIQ 2 algorithm
+NFIQ2::Algorithm model;
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+// Create fingerprint image data
+NFIQ2::FingerprintImageData image(
+    data, size, width, height, 0, 500
+);
 
-## Make it yours
+// Compute unified quality score
+unsigned int score = 
+    model.computeUnifiedQualityScore(image);
 
-Design a docs site that looks great and empowers your users.
+// Score is in range 0-100
+printf("Quality Score: %u\\n", score);`}</code>
+            </pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Quick Start
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+      Get up and running with NFIQ 2 in minutes
+    </p>
+  </div>
+
+  <Steps>
+    <Step title="Download pre-built binaries">
+      Download the latest version from [GitHub Releases](https://github.com/usnistgov/NFIQ2/releases) for your platform (Windows, macOS, or Linux). Pre-built libraries and CLI tools are available.
+    </Step>
+    <Step title="Include headers in your project">
+      Add the NFIQ 2 headers to your C++ project:
+      ```cpp
+      #include <nfiq2.hpp>
+      ```
+      Headers are installed in `/usr/local/nfiq2/include` on macOS and Linux, or `C:\Program Files\NFIQ 2\include` on Windows.
+    </Step>
+    <Step title="Load the random forest model">
+      Initialize the algorithm with the included model parameters:
+      ```cpp
+      NFIQ2::ModelInfo modelInfo("nist_plain_tir-ink.txt");
+      NFIQ2::Algorithm model(modelInfo);
+      ```
+    </Step>
+    <Step title="Compute quality scores">
+      Process your fingerprint images to get unified quality scores:
+      ```cpp
+      NFIQ2::FingerprintImageData rawImage(
+          pixels, size, width, height, fingerPosition, 500
+      );
+      unsigned int qualityScore = model.computeUnifiedQualityScore(rawImage);
+      ```
+      <Note>
+        Quality scores range from 0-100, where higher values indicate better quality images for biometric matching.
+      </Note>
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Key Features
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+      Standards-compliant quality assessment for operational fingerprint systems
+    </p>
+  </div>
+
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="ISO/IEC 29794-4 Compliant"
+      icon="certificate"
+      href="/concepts/quality-scores"
+    >
+      Officially recognized reference implementation of the international biometric quality standard.
+    </Card>
+    <Card
+      title="Unified Quality Scores"
+      icon="gauge-high"
+      href="/concepts/quality-scores"
+    >
+      High-resolution quality scores on a 0-100 scale for precise quality assessment.
+    </Card>
+    <Card
+      title="Native Quality Measures"
+      icon="chart-line"
+      href="/concepts/quality-measures"
+    >
+      Extract detailed quality metrics including FDA, LCS, OCL histogram, and minutiae-based measures.
+    </Card>
+    <Card
+      title="Actionable Feedback"
+      icon="lightbulb"
+      href="/concepts/actionable-feedback"
+    >
+      Get specific feedback to guide image capture and improve fingerprint quality.
+    </Card>
+    <Card
+      title="Cross-Platform Support"
+      icon="laptop-mobile"
+      href="/building/platforms"
+    >
+      Works on Windows, macOS, Linux, Android, and iOS platforms.
+    </Card>
+    <Card
+      title="CLI and Library"
+      icon="terminal"
+      href="/cli/overview"
+    >
+      Use as a C++ library in your application or via the standalone command-line tool.
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Explore the Documentation
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+      Learn how to integrate NFIQ 2 into your biometric systems
+    </p>
+  </div>
 
-Everything you need to create world-class documentation.
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <a
+      href="/concepts/quality-scores"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#7c7c7c] dark:hover:border-[#7c7c7c] overflow-hidden no-underline transition-colors"
+    >
+      <div className="h-48 bg-gradient-to-br from-[#7c7c7c]/10 to-[#7c7c7c]/5 dark:from-[#7c7c7c]/10 dark:to-[#7c7c7c]/5 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#7c7c7c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          Core Concepts
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Understand quality scores, native measures, actionable feedback, and the random forest model.
+        </p>
+        <div className="flex items-center text-sm font-medium text-gray-900 dark:text-white group-hover:text-[#7c7c7c] transition-colors">
+          Learn more
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    <a
+      href="/guides/computing-scores"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#7c7c7c] dark:hover:border-[#7c7c7c] overflow-hidden no-underline transition-colors"
+    >
+      <div className="h-48 bg-gradient-to-br from-[#7c7c7c]/10 to-[#7c7c7c]/5 dark:from-[#7c7c7c]/10 dark:to-[#7c7c7c]/5 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#7c7c7c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          Developer Guides
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Step-by-step guides for computing scores, extracting quality measures, and embedding models.
+        </p>
+        <div className="flex items-center text-sm font-medium text-gray-900 dark:text-white group-hover:text-[#7c7c7c] transition-colors">
+          View guides
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
 
-## Need inspiration?
+    <a
+      href="/api/algorithm"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#7c7c7c] dark:hover:border-[#7c7c7c] overflow-hidden no-underline transition-colors"
+    >
+      <div className="h-48 bg-gradient-to-br from-[#7c7c7c]/10 to-[#7c7c7c]/5 dark:from-[#7c7c7c]/10 dark:to-[#7c7c7c]/5 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#7c7c7c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          API Reference
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Complete C++ API documentation for all classes, methods, and quality modules.
+        </p>
+        <div className="flex items-center text-sm font-medium text-gray-900 dark:text-white group-hover:text-[#7c7c7c] transition-colors">
+          Browse API
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    <a
+      href="/cli/overview"
+      className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#7c7c7c] dark:hover:border-[#7c7c7c] overflow-hidden no-underline transition-colors"
+    >
+      <div className="h-48 bg-gradient-to-br from-[#7c7c7c]/10 to-[#7c7c7c]/5 dark:from-[#7c7c7c]/10 dark:to-[#7c7c7c]/5 flex items-center justify-center">
+        <svg className="w-20 h-20 text-[#7c7c7c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <div className="p-6 bg-white dark:bg-[#1a1d27]">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          CLI Tool
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Learn to use the command-line interface for batch processing and testing.
+        </p>
+        <div className="flex items-center text-sm font-medium text-gray-900 dark:text-white group-hover:text-[#7c7c7c] transition-colors">
+          CLI docs
+          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="bg-gradient-to-r from-[#7c7c7c]/10 to-[#7c7c7c]/5 dark:from-[#7c7c7c]/10 dark:to-[#7c7c7c]/5 rounded-2xl p-8 sm:p-12 border border-[#7c7c7c]/20 dark:border-[#7c7c7c]/20">
+    <div className="text-center">
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        Ready to Get Started?
+      </h2>
+      <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
+        Download NFIQ 2 from GitHub and start assessing fingerprint quality in your biometric applications today.
+      </p>
+      <div className="flex flex-wrap justify-center gap-4">
+        <a
+          href="/quickstart"
+          className="inline-flex items-center px-6 py-3 text-base font-semibold text-white bg-[#7c7c7c] hover:bg-[#6a6a6a] rounded-lg transition-colors no-underline"
+        >
+          Quick Start Guide
+          <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </a>
+        <a
+          href="https://github.com/usnistgov/NFIQ2/releases"
+          className="inline-flex items-center px-6 py-3 text-base font-semibold text-gray-900 dark:text-white border border-gray-300 dark:border-[#27272a] bg-white dark:bg-[#1a1d27] hover:bg-gray-50 dark:hover:bg-[#242838] rounded-lg transition-colors no-underline"
+        >
+          Download from GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

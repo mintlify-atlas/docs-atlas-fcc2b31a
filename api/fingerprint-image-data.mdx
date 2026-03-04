@@ -1,0 +1,253 @@
+---
+title: 'FingerprintImageData'
+description: 'Binary data representing a decompressed fingerprint image'
+---
+
+## Overview
+
+The `NFIQ2::FingerprintImageData` class represents binary data for a decompressed fingerprint image, canonically encoded as per ISO/IEC 39794-4:2019. This class inherits from `NFIQ2::Data` and adds fingerprint-specific metadata.
+
+## Class Definition
+
+```cpp
+namespace NFIQ2 {
+    class FingerprintImageData : public Data {
+        // Public interface
+    };
+}
+```
+
+## Constants
+
+### Resolution500PPI
+
+```cpp
+static const uint16_t Resolution500PPI { 500 };
+```
+
+Standard 500 PPI (pixels per inch) resolution constant.
+
+## Constructors
+
+### Default Constructor
+
+```cpp
+FingerprintImageData();
+```
+
+Default constructor.
+
+### Metadata-Only Constructor
+
+```cpp
+FingerprintImageData(
+    uint32_t width,
+    uint32_t height,
+    uint8_t fingerCode,
+    uint16_t ppi);
+```
+
+Constructor that does not store image data.
+
+<ParamField path="width" type="uint32_t">
+  Width of the image in pixels.
+</ParamField>
+
+<ParamField path="height" type="uint32_t">
+  Height of the image in pixels.
+</ParamField>
+
+<ParamField path="fingerCode" type="uint8_t">
+  Finger position of the fingerprint in the image.
+</ParamField>
+
+<ParamField path="ppi" type="uint16_t">
+  Resolution of the image in pixels per inch.
+</ParamField>
+
+### Full Constructor
+
+```cpp
+FingerprintImageData(
+    const uint8_t *pData,
+    uint32_t dataSize,
+    uint32_t width,
+    uint32_t height,
+    uint8_t fingerCode,
+    uint16_t ppi);
+```
+
+Constructor storing image data.
+
+<ParamField path="pData" type="const uint8_t *">
+  Pointer to decompressed 8 bit-per-pixel grayscale image data, canonically encoded as per ISO/IEC 39794-4:2019.
+</ParamField>
+
+<ParamField path="dataSize" type="uint32_t">
+  Size of the buffer pointed to by `pData`.
+</ParamField>
+
+<ParamField path="width" type="uint32_t">
+  Width of the image in pixels.
+</ParamField>
+
+<ParamField path="height" type="uint32_t">
+  Height of the image in pixels.
+</ParamField>
+
+<ParamField path="fingerCode" type="uint8_t">
+  Finger position of the fingerprint in the image.
+</ParamField>
+
+<ParamField path="ppi" type="uint16_t">
+  Resolution of the image in pixels per inch.
+</ParamField>
+
+### Copy Constructor
+
+```cpp
+FingerprintImageData(const FingerprintImageData &otherData);
+```
+
+Copy constructor.
+
+## Public Members
+
+### width
+
+```cpp
+uint32_t width { 0 };
+```
+
+Width of the fingerprint image in pixels.
+
+### height
+
+```cpp
+uint32_t height { 0 };
+```
+
+Height of the fingerprint image in pixels.
+
+### fingerCode
+
+```cpp
+uint8_t fingerCode { 0 };
+```
+
+ISO finger code of the fingerprint in the image.
+
+### ppi
+
+```cpp
+uint16_t ppi { Resolution500PPI };
+```
+
+Pixels per inch of the fingerprint image. Defaults to 500 PPI.
+
+## Methods
+
+### copyRemovingNearWhiteFrame
+
+```cpp
+NFIQ2::FingerprintImageData copyRemovingNearWhiteFrame() const;
+```
+
+Obtain a copy of the image with near-white lines surrounding the fingerprint removed.
+
+<ResponseField name="return" type="NFIQ2::FingerprintImageData">
+  Cropped fingerprint image.
+</ResponseField>
+
+**Throws:** `NFIQ2::Exception` if error performing the crop, or the image is too small to be processed after cropping.
+
+## Inherited Methods from Data
+
+Since `FingerprintImageData` inherits from `NFIQ2::Data`, the following methods are also available:
+
+### readFromFile
+
+```cpp
+void readFromFile(const std::string &filename);
+```
+
+Reads the content from a file into this object.
+
+**Throws:** `NFIQ2::Exception` if file cannot be opened.
+
+### writeToFile
+
+```cpp
+void writeToFile(const std::string &filename) const;
+```
+
+Writes the content to a file.
+
+**Throws:** `NFIQ2::Exception` if file cannot be opened.
+
+### toHexString
+
+```cpp
+std::string toHexString() const;
+```
+
+Generates a string in hexadecimal format of the buffer.
+
+**Throws:** `NFIQ2::Exception` if no data available in buffer.
+
+### fromBase64String
+
+```cpp
+void fromBase64String(const std::string &base64String);
+```
+
+Imports data from a Base64 encoded string.
+
+**Throws:** `NFIQ2::Exception` if invalid character is detected in string.
+
+### toBase64String
+
+```cpp
+std::string toBase64String() const;
+```
+
+Generates a string in Base64 format of the buffer.
+
+## Usage Example
+
+```cpp
+#include <nfiq2_fingerprintimagedata.hpp>
+
+// Create fingerprint image data from raw pixels
+uint8_t* pixels = /* ... load image data ... */;
+uint32_t width = 640;
+uint32_t height = 480;
+uint8_t fingerCode = 1;  // Right thumb
+uint16_t ppi = NFIQ2::FingerprintImageData::Resolution500PPI;
+
+NFIQ2::FingerprintImageData imageData(
+    pixels,
+    width * height,
+    width,
+    height,
+    fingerCode,
+    ppi
+);
+
+// Remove near-white borders
+NFIQ2::FingerprintImageData cropped = imageData.copyRemovingNearWhiteFrame();
+```
+
+## Image Format Requirements
+
+<Warning>
+The fingerprint image must be:
+- 8 bit-per-pixel grayscale
+- Decompressed (raw pixels)
+- Canonically encoded as per ISO/IEC 39794-4:2019
+</Warning>
+
+## See Also
+
+- [Algorithm](/api/algorithm) - Uses FingerprintImageData for quality scoring
+- Data (base class) - Base class for binary data handling

@@ -1,0 +1,273 @@
+---
+title: 'Quality Measure Algorithms'
+description: 'Algorithm class and functions for organizing and analyzing quality measure computation'
+---
+
+The `NFIQ2::QualityMeasures::Algorithm` class controls the computation of one or more quality measures. Functions in this namespace help organize and analyze computed algorithm objects.
+
+## Algorithm Class
+
+```cpp
+namespace NFIQ2 { namespace QualityMeasures {
+    class Algorithm;
+}}
+```
+
+The `Algorithm` class is an abstract base class that controls the computation of one or more quality measures. Each specific quality measure algorithm (e.g., `FrequencyDomainAnalysis`, `MinutiaeCount`) is implemented as a subclass.
+
+<Note>
+  The `Algorithm` class is typically used through shared pointers (`std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>`) returned by computation functions.
+</Note>
+
+### Key Characteristics
+
+- **Encapsulation**: Each algorithm object contains computed quality measure values, timing information, and metadata
+- **Identifier-based**: Each algorithm has a unique identifier from `NFIQ2::Identifiers::QualityMeasureAlgorithms`
+- **Multiple measures**: A single algorithm may compute multiple related quality measures (e.g., mean and standard deviation)
+- **Performance tracking**: Algorithms track computation time in milliseconds
+
+---
+
+## Functions
+
+### getNativeQualityMeasureAlgorithms
+
+```cpp
+std::unordered_map<std::string,
+    std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>
+getNativeQualityMeasureAlgorithms(
+    const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>
+        &algorithms);
+```
+
+Organize quality measure algorithms as a map with algorithm identifiers as keys.
+
+<ParamField path="algorithms" type="const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> &" required>
+  Computed native quality measure algorithms, typically from `computeNativeQualityMeasureAlgorithms()`.
+</ParamField>
+
+<ResponseField name="return" type="std::unordered_map<std::string, std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>">
+  Algorithms from the input vector organized in a map. Keys are algorithm identifiers from `NFIQ2::Identifiers::QualityMeasureAlgorithms`.
+</ResponseField>
+
+**See also:** [Quality Measure Identifiers](/api/quality-measure-identifiers)
+
+**Example:**
+```cpp
+#include <nfiq2_qualitymeasures.hpp>
+
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+auto algorithmMap = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithms(algorithms);
+
+// Access specific algorithm by identifier
+auto fdaAlgorithm = algorithmMap["FrequencyDomainAnalysis"];
+```
+
+---
+
+### getNativeQualityMeasureAlgorithmSpeeds
+
+```cpp
+std::unordered_map<std::string, double>
+getNativeQualityMeasureAlgorithmSpeeds(
+    const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>
+        &algorithms);
+```
+
+Obtain the time elapsed during each quality measure algorithm's computation.
+
+<ParamField path="algorithms" type="const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> &" required>
+  Computed native quality measure algorithms, typically from `computeNativeQualityMeasureAlgorithms()`.
+</ParamField>
+
+<ResponseField name="return" type="std::unordered_map<std::string, double>">
+  A map of quality measure algorithm identifiers to elapsed time in milliseconds. Keys are identifiers from `NFIQ2::Identifiers::QualityMeasureAlgorithms`.
+</ResponseField>
+
+**Example:**
+```cpp
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+auto speeds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+for (const auto &[algorithmId, milliseconds] : speeds) {
+    std::cout << algorithmId << " computed in " 
+              << milliseconds << " ms" << std::endl;
+}
+```
+
+**Performance Monitoring:**
+```cpp
+// Profile algorithm performance across multiple images
+std::unordered_map<std::string, std::vector<double>> performanceData;
+
+for (const auto &image : images) {
+    auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+    auto speeds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+    
+    for (const auto &[alg, ms] : speeds) {
+        performanceData[alg].push_back(ms);
+    }
+}
+
+// Calculate average performance
+for (const auto &[alg, times] : performanceData) {
+    double avg = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
+    std::cout << alg << " average: " << avg << " ms" << std::endl;
+}
+```
+
+---
+
+## Quality Measure Algorithm Types
+
+NFIQ 2 includes the following native quality measure algorithms:
+
+<AccordionGroup>
+  <Accordion title="FrequencyDomainAnalysis" icon="wave-square">
+    Analyzes the frequency of the sinusoid following the ridge-valley structure.
+    
+    **Computes:**
+    - Mean of local frequency domain analysis
+    - Standard deviation of local frequency domain analysis
+    - Histogram of local quality values (10 bins)
+  </Accordion>
+
+  <Accordion title="MinutiaeCount" icon="fingerprint">
+    Counts minutiae detected using the integrated FingerJet FX OSE feature extractor.
+    
+    **Computes:**
+    - Total minutiae count
+    - Minutiae count in center of mass (200x200 pixel region)
+  </Accordion>
+
+  <Accordion title="MinutiaeQuality" icon="star">
+    Assesses quality of detected minutiae based on local image characteristics.
+    
+    **Computes:**
+    - Percentage of minutiae with quality based on image mean (0-0.5 range)
+    - Percentage of minutiae with orientation certainty above 80
+  </Accordion>
+
+  <Accordion title="LocalClarity" icon="eye">
+    Measures the clarity of ridges and valleys in local regions.
+    
+    **Computes:**
+    - Mean of local clarity score
+    - Standard deviation of local clarity score
+    - Histogram of local quality values (10 bins)
+  </Accordion>
+
+  <Accordion title="Contrast" icon="circle-half-stroke">
+    Analyzes gray level contrast across the image.
+    
+    **Computes:**
+    - Average contrast (MU - arithmetic mean)
+    - Average of average contrasts (MMB - mean of block means)
+  </Accordion>
+
+  <Accordion title="OrientationCertainty" icon="compass">
+    Measures the strength of energy concentration along dominant ridge flow orientation.
+    
+    **Computes:**
+    - Mean of local orientation certainty level
+    - Standard deviation of local orientation certainty level
+    - Histogram of local quality values (10 bins)
+  </Accordion>
+
+  <Accordion title="OrientationFlow" icon="arrows-rotate">
+    Assesses ridge flow continuity based on orientation differences between neighboring blocks.
+    
+    **Computes:**
+    - Mean of local orientation flow
+    - Standard deviation of orientation flow
+    - Histogram of local quality values (10 bins)
+  </Accordion>
+
+  <Accordion title="RegionOfInterestMean" icon="crop">
+    Analyzes the foreground (region of interest) area of the image.
+    
+    **Computes:**
+    - Mean grayscale value of local regions in ROI
+  </Accordion>
+
+  <Accordion title="RegionOfInterestCoherence" icon="chart-line">
+    Measures coherence across the foreground area.
+    
+    **Computes:**
+    - Sum of coherence values over ROI
+    - Mean coherence value over ROI
+  </Accordion>
+
+  <Accordion title="RidgeValleyUniformity" icon="bars">
+    Measures the consistency of ridge and valley widths.
+    
+    **Computes:**
+    - Mean of local ridge valley uniformity
+    - Standard deviation of local ridge valley uniformity
+    - Histogram of local quality values (10 bins)
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Usage Patterns
+
+### Basic Algorithm Access
+
+```cpp
+NFIQ2::FingerprintImageData image(data, size, width, height, 0, 500);
+
+// Compute all algorithms
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+
+// Organize by identifier for easy access
+auto algorithmMap = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithms(algorithms);
+
+// Access specific algorithm
+if (algorithmMap.find("MinutiaeCount") != algorithmMap.end()) {
+    auto minutiaeAlg = algorithmMap["MinutiaeCount"];
+    // Use algorithm...
+}
+```
+
+### Performance Profiling
+
+```cpp
+// Compute algorithms with timing
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+auto speeds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+// Find slowest algorithm
+auto slowest = std::max_element(
+    speeds.begin(), speeds.end(),
+    [](const auto &a, const auto &b) { return a.second < b.second; }
+);
+
+std::cout << "Slowest: " << slowest->first 
+          << " (" << slowest->second << " ms)" << std::endl;
+```
+
+### Selective Processing
+
+```cpp
+// Get list of all algorithm identifiers
+auto algorithmIds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmIDs();
+
+std::cout << "Available algorithms:" << std::endl;
+for (const auto &id : algorithmIds) {
+    std::cout << "  - " << id << std::endl;
+}
+```
+
+---
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Quality Measures" icon="chart-mixed" href="/api/quality-measures">
+    Core functions for computing quality measures
+  </Card>
+  <Card title="Quality Measure Identifiers" icon="tag" href="/api/quality-measure-identifiers">
+    View all available algorithm and measure identifiers
+  </Card>
+</CardGroup>

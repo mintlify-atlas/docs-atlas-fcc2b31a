@@ -1,0 +1,487 @@
+---
+title: 'Command-Line Usage'
+description: 'Complete reference for NFIQ2 CLI options, flags, and input/output formats'
+---
+
+## Synopsis
+
+The `nfiq2` command-line tool has two main usage patterns:
+
+<CodeGroup>
+```bash Direct Input
+nfiq2 [OPTIONS] path [path ...]
+```
+
+```bash Batch Files
+nfiq2 [OPTIONS] -f batchfile [-f batchfile ...]
+```
+</CodeGroup>
+
+## Basic Usage
+
+### Single Image
+
+Process a single fingerprint image:
+
+```bash
+nfiq2 fingerprint.png
+```
+
+**Output:**
+```
+50
+```
+
+<Note>
+When processing a single image without `-v` or `-q` flags, only the quality score is printed (no CSV headers).
+</Note>
+
+### Multiple Images
+
+Process multiple images with CSV output:
+
+```bash
+nfiq2 print1.wsq print2.png print3.jpg
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+print1.wsq,0,45,,0,0
+print2.png,0,67,,0,0
+print3.jpg,0,52,,0,0
+```
+
+## Command-Line Options
+
+### Output Options
+
+<ParamField path="-v" type="flag">
+  **Verbose output** - Includes individual native quality measures computed during score calculation. These are the raw feature values before mapping to 0-100.
+  
+  ```bash
+  nfiq2 -v fingerprint.png
+  ```
+</ParamField>
+
+<ParamField path="-b" type="flag">
+  **ISO/IEC 29794-1:2024 quality blocks** - Provides quality component values mapped to [0-100] range. Required for inclusion in ISO/IEC 29794-1:2024 quality blocks.
+  
+  ```bash
+  nfiq2 -b fingerprint.png
+  ```
+</ParamField>
+
+<ParamField path="-a" type="flag">
+  **Actionable quality feedback** - Provides additional actionable feedback about each fingerprint image (e.g., contrast too low, insufficient foreground).
+  
+  ```bash
+  nfiq2 -a fingerprint.png
+  ```
+</ParamField>
+
+<ParamField path="-q" type="flag">
+  **Speed/timing information** - Displays elapsed time for computation of each native quality measure.
+  
+  ```bash
+  nfiq2 -q fingerprint.png
+  ```
+</ParamField>
+
+<ParamField path="-o" type="string">
+  **Output file** - Write all output to the specified file instead of stdout. Overwrites file if it exists.
+  
+  ```bash
+  nfiq2 -o results.csv image1.png image2.png
+  ```
+</ParamField>
+
+### Input Options
+
+<ParamField path="-i" type="string" repeatable>
+  **Explicit input argument** - Allows explicit specification of input paths. Equivalent to providing paths directly.
+  
+  ```bash
+  nfiq2 -i image1.png -i /path/to/images/ image2.png
+  ```
+</ParamField>
+
+<ParamField path="-f" type="string" repeatable>
+  **Batch file** - Plain text file where each line is a path to process. Multiple batch files can be specified.
+  
+  ```bash
+  nfiq2 -f batch1.txt -f batch2.txt
+  ```
+  
+  **batch1.txt example:**
+  ```
+  /path/to/image1.png
+  /path/to/image2.wsq
+  /path/to/image3.jpg
+  ```
+</ParamField>
+
+<ParamField path="-r" type="flag">
+  **Recursive directory scanning** - Recursively search directories for images. Uses depth-first traversal.
+  
+  ```bash
+  nfiq2 -r /path/to/fingerprints/
+  ```
+</ParamField>
+
+### Processing Options
+
+<ParamField path="-F" type="flag">
+  **Force processing** - Automatically quantize and/or resample images that don't meet requirements. Does not prompt for user input.
+  
+  ```bash
+  nfiq2 -F mixed_quality_images/
+  ```
+  
+  <Warning>
+  If resolution cannot be determined, `-F` assumes 500 PPI. This may produce incorrect scores for images with different resolutions.
+  </Warning>
+</ParamField>
+
+<ParamField path="-j" type="integer">
+  **Thread count** - Number of worker threads for batch operations. One additional thread is spawned for coordinating output.
+  
+  ```bash
+  nfiq2 -j 8 -f large_batch.txt
+  ```
+  
+  <Note>
+  If thread count exceeds physical cores, a warning prompts to confirm or adjust to match core count.
+  </Note>
+</ParamField>
+
+<ParamField path="-m" type="string">
+  **Model information file** - Path to alternative random forest parameters. Allows using custom trained models.
+  
+  ```bash
+  nfiq2 -m custom_model.txt fingerprint.png
+  ```
+  
+  **Model file format:**
+  ```
+  Name = Custom Model Name
+  Description = Model trained on specific dataset
+  Trainer = Organization Name
+  Version = 1.0
+  Path = ./random_forest_params.xml
+  Hash = abc123def456...
+  ```
+  
+  <Note>
+  If `Path` is relative, it must be relative to the directory containing the model file, not the current working directory.
+  </Note>
+</ParamField>
+
+### Debug Options
+
+<ParamField path="-d" type="flag">
+  **Debug mode** - Provides detailed information about program execution and computation steps.
+  
+  ```bash
+  nfiq2 -d fingerprint.png
+  ```
+</ParamField>
+
+## Input Formats
+
+### Image Files
+
+Supported image formats:
+
+<CardGroup cols={2}>
+  <Card title="Standard Formats">
+    - BMP (.bmp)
+    - JPEG (.jpg, .jpeg)
+    - JPEG-LS (.jls)
+    - PNG (.png)
+    - TIFF (.tif, .tiff)
+    - PBM/PGM/PPM (.pbm, .pgm, .ppm)
+  </Card>
+  
+  <Card title="Forensic Formats">
+    - WSQ (.wsq) - FBI Wavelet Scalar Quantization
+    - JPEG 2000 (.jp2, .j2k)
+  </Card>
+</CardGroup>
+
+### Biometric Records
+
+<Tabs>
+  <Tab title="ANSI/NIST-ITL">
+    **ANSI/NIST-ITL 1-2007 and later** (binary encoding)
+    
+    - Type 14 records (fingerprint images)
+    - File extension typically `.an2`
+    
+    ```bash
+    nfiq2 record.an2
+    ```
+    
+    All Type 14 records within the file are processed separately.
+  </Tab>
+  
+  <Tab title="ISO/IEC 19794-4">
+    **ISO/IEC 19794-4** fingerprint image records
+    
+    - International fingerprint image standard
+    - Binary format
+    
+    ```bash
+    nfiq2 fingerprint.iso
+    ```
+  </Tab>
+  
+  <Tab title="RecordStores">
+    **Biometric Evaluation Framework RecordStores**
+    
+    - Directory-based storage format
+    - Contains multiple fingerprint records
+    
+    ```bash
+    nfiq2 recordstore_directory
+    ```
+    
+    Can be processed with multi-threading:
+    ```bash
+    nfiq2 -j 8 recordstore_directory
+    ```
+  </Tab>
+</Tabs>
+
+### Directories
+
+Process all supported files in a directory:
+
+```bash
+# Non-recursive (current directory only)
+nfiq2 /path/to/fingerprints/
+
+# Recursive (all subdirectories)
+nfiq2 -r /path/to/fingerprints/
+```
+
+### Batch Files
+
+Batch files are plain text files with one path per line:
+
+```text
+# batch.txt
+/path/to/image1.png
+/path/to/image2.wsq
+/path/to/directory/
+/path/to/recordstore/
+image3.jpg
+```
+
+Process the batch file:
+
+```bash
+nfiq2 -f batch.txt
+```
+
+<Note>
+Paths in batch files can be absolute or relative to the current working directory.
+</Note>
+
+## Output Format
+
+### Standard CSV Output
+
+Default output includes:
+
+| Column | Description |
+|--------|-------------|
+| `Filename` | Path to the input image |
+| `FingerCode` | Finger position code (if available) |
+| `QualityScore` | Unified quality score (0-100) |
+| `OptionalError` | Error message if processing failed |
+| `Quantized` | `1` if image was quantized, `0` otherwise |
+| `Resampled` | `1` if image was resampled, `0` otherwise |
+
+**Example:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+print1.wsq,0,45,,0,0
+print2.png,0,67,,0,0
+```
+
+### Verbose Output (-v)
+
+Adds columns for each native quality measure:
+
+```csv
+Filename,FingerCode,QualityScore,...,FDA_Bin10_0,FDA_Bin10_1,...,RVUP_Bin10_StdDev
+print1.wsq,0,45,...,0.234,0.156,...,12.34
+```
+
+<Note>
+Native quality measures are the raw feature values computed by individual quality assessment algorithms.
+</Note>
+
+### Quality Block Output (-b)
+
+Adds columns for ISO/IEC 29794-1:2024 compliant quality component values (mapped to 0-100):
+
+```csv
+Filename,FingerCode,QualityScore,...,FDA_Bin10_0_Mapped,FDA_Bin10_1_Mapped,...
+print1.wsq,0,45,...,23,15,...
+```
+
+### Actionable Feedback (-a)
+
+Adds columns with actionable quality feedback:
+
+```csv
+Filename,FingerCode,QualityScore,...,EmptyImageOrContrastTooLow,SufficientFingerprintForeground
+print1.wsq,0,45,...,0,1
+```
+
+Actionable feedback flags:
+- `EmptyImageOrContrastTooLow`
+- `UniformImage`
+- `SufficientFingerprintForeground`
+- And more...
+
+### Timing Information (-q)
+
+Adds columns showing elapsed time (in seconds) for each quality measure:
+
+```csv
+Filename,QualityScore,...,FDA_Time,FJFXPos_Time,RVUP_Time
+print1.wsq,45,...,0.012,0.034,0.008
+```
+
+## Combining Options
+
+Options can be combined for powerful workflows:
+
+<CodeGroup>
+```bash Full Analysis
+# Get everything: verbose output, actionable feedback, timing, with multi-threading
+nfiq2 -v -a -q -j 8 -f large_batch.txt -o results.csv
+```
+
+```bash Production Batch
+# Process directory recursively with force mode and custom output
+nfiq2 -r -F -j 4 -o quality_scores.csv /data/fingerprints/
+```
+
+```bash Quality Control
+# Get actionable feedback for quality control
+nfiq2 -a -b -o qc_report.csv fingerprint_samples/
+```
+
+```bash Custom Model Testing
+# Test with custom model and debug output
+nfiq2 -m custom_model.txt -d -v test_images/
+```
+</CodeGroup>
+
+## Exit Codes
+
+The `nfiq2` command returns standard exit codes:
+
+| Code | Meaning |
+|------|----------|
+| `0` | Success - all images processed |
+| `1` | Error - invalid arguments or processing failure |
+
+<Note>
+Individual image processing errors are reported in the `OptionalError` column and do not cause the program to exit with error code.
+</Note>
+
+## Performance Tips
+
+<Steps>
+  <Step title="Use Multi-threading">
+    For batch operations, use `-j` with a thread count matching your CPU cores:
+    ```bash
+    nfiq2 -j $(nproc) -f batch.txt  # Linux
+    nfiq2 -j %NUMBER_OF_PROCESSORS% -f batch.txt  # Windows
+    ```
+  </Step>
+  
+  <Step title="Optimize Output">
+    Only request data you need. Avoid `-v` and `-q` unless necessary:
+    ```bash
+    # Fast: only quality scores
+    nfiq2 large_batch.txt
+    
+    # Slower: includes verbose metrics
+    nfiq2 -v -q large_batch.txt
+    ```
+  </Step>
+  
+  <Step title="Batch Similar Images">
+    Group images by type and resolution in batch files for better cache performance.
+  </Step>
+  
+  <Step title="Use RecordStores">
+    For very large datasets, use BiometricEvaluation RecordStores instead of individual files for better I/O performance.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Images not meeting requirements">
+    **Problem:** Warning about image not meeting 8-bit, 500 PPI requirements
+    
+    **Solution:** Use the `-F` flag to automatically process:
+    ```bash
+    nfiq2 -F image.png
+    ```
+    
+    Or manually convert images to 8-bit grayscale at 500 PPI before processing.
+  </Accordion>
+  
+  <Accordion title="Thread count warning">
+    **Problem:** Warning about thread count exceeding physical cores
+    
+    **Solution:** Reduce thread count to match CPU cores:
+    ```bash
+    # Check CPU core count first
+    nproc  # Linux
+    sysctl -n hw.ncpu  # macOS
+    
+    # Use appropriate thread count
+    nfiq2 -j 4 batch.txt
+    ```
+  </Accordion>
+  
+  <Accordion title="Resolution unknown warning">
+    **Problem:** Image resolution cannot be determined
+    
+    **Solution:** The `-F` flag will assume 500 PPI. Verify your images actually are 500 PPI, or convert them first:
+    ```bash
+    # Using ImageMagick to set resolution
+    convert input.png -density 500 -units PixelsPerInch output.png
+    ```
+  </Accordion>
+  
+  <Accordion title="Out of memory errors">
+    **Problem:** System runs out of memory during batch processing
+    
+    **Solution:** Reduce thread count or process in smaller batches:
+    ```bash
+    # Reduce threads
+    nfiq2 -j 2 batch.txt
+    
+    # Or split batch file
+    split -l 1000 large_batch.txt batch_part_
+    nfiq2 -f batch_part_aa -o results_aa.csv
+    nfiq2 -f batch_part_ab -o results_ab.csv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="View Examples" icon="code" href="/cli/examples">
+  See real-world usage examples with actual terminal output and results
+</Card>

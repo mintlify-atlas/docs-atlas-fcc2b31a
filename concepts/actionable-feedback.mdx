@@ -1,0 +1,633 @@
+---
+title: 'Actionable Quality Feedback'
+description: 'Using NFIQ2 actionable quality feedback to guide image capture and improve fingerprint quality'
+icon: 'comments'
+---
+
+## Overview
+
+**Actionable quality feedback** provides interpretable quality assessments that can guide operators during fingerprint capture. Unlike unified quality scores (which predict recognition performance), actionable feedback identifies specific issues that can be corrected through recapture.
+
+<Info>
+Actionable feedback translates complex quality measures into simple yes/no indicators that operators can use to determine if a recapture is needed and why.
+</Info>
+
+## Purpose and Benefits
+
+Actionable quality feedback helps:
+
+- **Operators**: Understand why a fingerprint was rejected
+- **Capture systems**: Provide real-time guidance during enrollment
+- **Quality assurance**: Identify systematic capture problems
+- **Training**: Teach proper capture techniques
+
+<Tip>
+Use actionable feedback during **live capture** to guide operators. Use unified quality scores for **post-capture** quality assessment and enrollment decisions.
+</Tip>
+
+## Available Feedback Indicators
+
+NFIQ2 provides four primary actionable quality feedback indicators:
+
+```cpp
+namespace NFIQ2::Identifiers::ActionableQualityFeedback {
+    // Image appears blank or has insufficient contrast
+    extern const char EmptyImageOrContrastTooLow[];
+    
+    // Image shows no variation (solid color/uniform gray)
+    extern const char UniformImage[];
+    
+    // Image contains sufficient minutiae for matching
+    extern const char FingerprintImageWithMinutiae[];
+    
+    // Image has adequate foreground area
+    extern const char SufficientFingerprintForeground[];
+}
+```
+
+## Computing Actionable Feedback
+
+### Basic Usage
+
+```cpp
+#include <nfiq2.hpp>
+
+NFIQ2::FingerprintImageData fingerprintImage(/* ... */);
+
+// Compute actionable quality feedback
+auto feedback = 
+    NFIQ2::QualityMeasures::computeActionableQualityFeedback(fingerprintImage);
+
+// Check specific indicators
+bool hasMinutiae = feedback["FingerprintImageWithMinutiae"] >= 
+    NFIQ2::Thresholds::ActionableQualityFeedback::FingerprintImageWithMinutiae;
+
+bool hasSufficientForeground = feedback["SufficientFingerprintForeground"] >= 
+    NFIQ2::Thresholds::ActionableQualityFeedback::SufficientFingerprintForeground;
+
+bool notEmpty = feedback["EmptyImageOrContrastTooLow"] < 
+    NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow;
+
+bool notUniform = feedback["UniformImage"] > 
+    NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage;
+```
+
+### From Pre-Computed Quality Measures
+
+If you've already computed native quality measures, extract actionable feedback without reprocessing:
+
+```cpp
+// Compute quality measure algorithms
+auto algorithms = 
+    NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(fingerprintImage);
+
+// Extract actionable feedback from algorithms
+auto feedback = 
+    NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+
+// Use feedback values as before
+for (const auto& [indicator, value] : feedback) {
+    std::cout << indicator << ": " << value << std::endl;
+}
+```
+
+## Feedback Indicators Explained
+
+### EmptyImageOrContrastTooLow
+
+**What it detects**: Images that are blank, nearly blank, or have insufficient contrast.
+
+<Tabs>
+  <Tab title="Description">
+    This indicator checks if the mean gray level appears white or near-white, suggesting:
+    - Empty image (no finger present)
+    - Sensor not properly contacted
+    - Overexposure
+    - Very light impression
+  </Tab>
+  
+  <Tab title="Threshold">
+    ```cpp
+    namespace NFIQ2::Thresholds::ActionableQualityFeedback {
+        extern const double EmptyImageOrContrastTooLow;
+    }
+    
+    // Usage
+    bool contrastOK = feedback["EmptyImageOrContrastTooLow"] < 
+        NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow;
+    
+    if (!contrastOK) {
+        std::cout << "Warning: Image appears blank or has very low contrast" << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Operator Guidance">
+    When this indicator triggers:
+    
+    ✓ **Check**: Finger is properly placed on sensor  
+    ✓ **Check**: Sensor surface is clean  
+    ✓ **Adjust**: Finger pressure (may be too light)  
+    ✓ **Try**: Different finger if problem persists  
+  </Tab>
+</Tabs>
+
+<Warning>
+A mean gray level near 255 (white) almost always indicates a capture problem that requires operator intervention.
+</Warning>
+
+### UniformImage
+
+**What it detects**: Images with no variation in gray levels.
+
+<Tabs>
+  <Tab title="Description">
+    This indicator uses the standard deviation of gray levels to detect:
+    - Solid gray images (no detail)
+    - Sensor malfunction
+    - Obstructed sensor (e.g., dirt, film)
+    - Extreme underexposure
+  </Tab>
+  
+  <Tab title="Threshold">
+    ```cpp
+    namespace NFIQ2::Thresholds::ActionableQualityFeedback {
+        extern const double UniformImage;
+    }
+    
+    // Usage
+    bool hasVariation = feedback["UniformImage"] > 
+        NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage;
+    
+    if (!hasVariation) {
+        std::cout << "Error: Image shows no detail (uniform gray)" << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Operator Guidance">
+    When this indicator triggers:
+    
+    ✓ **Check**: Sensor is functioning properly  
+    ✓ **Clean**: Sensor surface thoroughly  
+    ✓ **Verify**: Finger is actually on the sensor  
+    ✓ **Report**: May indicate hardware failure  
+  </Tab>
+</Tabs>
+
+<Note>
+Uniform images are rare in normal operation. This indicator often signals equipment problems requiring maintenance.
+</Note>
+
+### FingerprintImageWithMinutiae
+
+**What it detects**: Whether the image contains sufficient minutiae for matching.
+
+<Tabs>
+  <Tab title="Description">
+    This indicator reports the number of minutiae detected by the integrated FingerJet FX OSE feature extractor.
+    
+    Minutiae count correlates with:
+    - Contact area
+    - Ridge clarity
+    - Overall capture quality
+    
+    Low minutiae count suggests:
+    - Partial print (insufficient contact)
+    - Dry finger
+    - Smudged impression
+  </Tab>
+  
+  <Tab title="Threshold">
+    ```cpp
+    namespace NFIQ2::Thresholds::ActionableQualityFeedback {
+        extern const double FingerprintImageWithMinutiae;
+    }
+    
+    // This is equivalent to Minutiae_Count native quality measure
+    // Typical threshold: 12-20 minutiae minimum
+    
+    bool hasEnoughMinutiae = feedback["FingerprintImageWithMinutiae"] >= 
+        NFIQ2::Thresholds::ActionableQualityFeedback::FingerprintImageWithMinutiae;
+    
+    if (!hasEnoughMinutiae) {
+        double count = feedback["FingerprintImageWithMinutiae"];
+        std::cout << "Warning: Only " << count << " minutiae detected" << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Operator Guidance">
+    When minutiae count is low:
+    
+    ✓ **Increase**: Finger contact area  
+    ✓ **Apply**: Slightly more pressure  
+    ✓ **Clean**: Finger surface (remove moisture/oil)  
+    ✓ **Try**: Rolling finger slightly for more area  
+    ✓ **Check**: Finger isn't excessively dry (may need moisturizer)  
+  </Tab>
+</Tabs>
+
+<Info>
+**Expected minutiae counts**:
+- Excellent captures: 50-80 minutiae
+- Good captures: 30-50 minutiae
+- Acceptable: 20-30 minutiae
+- Marginal: 12-20 minutiae
+- Insufficient: < 12 minutiae
+</Info>
+
+### SufficientFingerprintForeground
+
+**What it detects**: Whether adequate foreground (fingerprint) area is present.
+
+<Tabs>
+  <Tab title="Description">
+    This indicator counts pixels in the computed foreground region (ROI).
+    
+    Low foreground area indicates:
+    - Partial print
+    - Finger not fully contacting sensor
+    - Edge placement (finger off-center)
+    - Small finger (children)
+  </Tab>
+  
+  <Tab title="Threshold">
+    ```cpp
+    namespace NFIQ2::Thresholds::ActionableQualityFeedback {
+        extern const double SufficientFingerprintForeground;
+    }
+    
+    // Reports number of foreground pixels
+    bool sufficientArea = feedback["SufficientFingerprintForeground"] >= 
+        NFIQ2::Thresholds::ActionableQualityFeedback::SufficientFingerprintForeground;
+    
+    if (!sufficientArea) {
+        double pixels = feedback["SufficientFingerprintForeground"];
+        std::cout << "Warning: Foreground area too small (" << pixels << " pixels)" << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Operator Guidance">
+    When foreground area is insufficient:
+    
+    ✓ **Center**: Finger on sensor  
+    ✓ **Increase**: Contact area (flatten finger)  
+    ✓ **Avoid**: Fingertip-only contact  
+    ✓ **Ensure**: Entire fingerprint tip is on sensor  
+    ✓ **Consider**: Capturing a different finger if repeated failures  
+  </Tab>
+</Tabs>
+
+## Implementing Real-Time Feedback
+
+### Simple Capture Loop
+
+```cpp
+#include <nfiq2.hpp>
+
+bool captureWithFeedback(NFIQ2::FingerprintImageData& image) {
+    // Compute actionable feedback
+    auto feedback = NFIQ2::QualityMeasures::computeActionableQualityFeedback(image);
+    
+    // Check each indicator
+    bool passedAllChecks = true;
+    std::vector<std::string> issues;
+    
+    // Empty or low contrast?
+    if (feedback["EmptyImageOrContrastTooLow"] >= 
+        NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow) {
+        issues.push_back("Image appears blank or has very low contrast");
+        passedAllChecks = false;
+    }
+    
+    // Uniform image?
+    if (feedback["UniformImage"] <= 
+        NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage) {
+        issues.push_back("Image shows no detail (possible sensor issue)");
+        passedAllChecks = false;
+    }
+    
+    // Sufficient minutiae?
+    if (feedback["FingerprintImageWithMinutiae"] < 
+        NFIQ2::Thresholds::ActionableQualityFeedback::FingerprintImageWithMinutiae) {
+        issues.push_back("Insufficient minutiae detected");
+        passedAllChecks = false;
+    }
+    
+    // Sufficient foreground?
+    if (feedback["SufficientFingerprintForeground"] < 
+        NFIQ2::Thresholds::ActionableQualityFeedback::SufficientFingerprintForeground) {
+        issues.push_back("Insufficient foreground area");
+        passedAllChecks = false;
+    }
+    
+    if (!passedAllChecks) {
+        std::cout << "Capture issues detected:" << std::endl;
+        for (const auto& issue : issues) {
+            std::cout << "  - " << issue << std::endl;
+        }
+        return false;
+    }
+    
+    return true;
+}
+```
+
+### Advanced Feedback with Quality Score
+
+```cpp
+bool captureWithDetailedFeedback(
+    NFIQ2::FingerprintImageData& image,
+    NFIQ2::Algorithm& algorithm,
+    unsigned int minQualityScore = 50
+) {
+    // Compute everything at once
+    auto algorithms = 
+        NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+    
+    // Get actionable feedback
+    auto feedback = NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+    
+    // Get unified quality score
+    unsigned int qualityScore = algorithm.computeUnifiedQualityScore(algorithms);
+    
+    // Check actionable feedback first (critical issues)
+    bool hasCriticalIssues = false;
+    
+    if (feedback["EmptyImageOrContrastTooLow"] >= 
+        NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow) {
+        std::cout << "CRITICAL: Image is blank or nearly blank" << std::endl;
+        hasCriticalIssues = true;
+    }
+    
+    if (feedback["UniformImage"] <= 
+        NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage) {
+        std::cout << "CRITICAL: Image is uniform (no detail)" << std::endl;
+        hasCriticalIssues = true;
+    }
+    
+    if (hasCriticalIssues) {
+        return false;  // Don't proceed with recapture attempts
+    }
+    
+    // Check quality-related issues
+    if (feedback["FingerprintImageWithMinutiae"] < 
+        NFIQ2::Thresholds::ActionableQualityFeedback::FingerprintImageWithMinutiae) {
+        std::cout << "WARNING: Low minutiae count - try increasing contact area" << std::endl;
+    }
+    
+    if (feedback["SufficientFingerprintForeground"] < 
+        NFIQ2::Thresholds::ActionableQualityFeedback::SufficientFingerprintForeground) {
+        std::cout << "WARNING: Small foreground - center finger on sensor" << std::endl;
+    }
+    
+    // Final quality check
+    if (qualityScore < minQualityScore) {
+        std::cout << "Quality score " << qualityScore 
+                  << " below minimum " << minQualityScore << std::endl;
+        return false;
+    }
+    
+    std::cout << "Capture successful! Quality score: " << qualityScore << std::endl;
+    return true;
+}
+```
+
+## Getting Feedback Indicator IDs
+
+```cpp
+// Get all actionable quality feedback identifiers
+std::vector<std::string> feedbackIDs = 
+    NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs();
+
+std::cout << "Available feedback indicators:" << std::endl;
+for (const auto& id : feedbackIDs) {
+    std::cout << "  - " << id << std::endl;
+}
+
+// Output:
+// Available feedback indicators:
+//   - EmptyImageOrContrastTooLow
+//   - UniformImage
+//   - FingerprintImageWithMinutiae
+//   - SufficientFingerprintForeground
+```
+
+## User Interface Integration
+
+### Visual Feedback Examples
+
+<Tabs>
+  <Tab title="Console Interface">
+    ```cpp
+    void displayFeedback(const std::unordered_map<std::string, double>& feedback) {
+        std::cout << "\n=== Capture Quality Feedback ===\n" << std::endl;
+        
+        // Empty/low contrast check
+        bool empty = feedback.at("EmptyImageOrContrastTooLow") >= 
+            NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow;
+        std::cout << (empty ? "✗" : "✓") 
+                  << " Image contrast: " 
+                  << (empty ? "TOO LOW" : "OK") << std::endl;
+        
+        // Uniform check
+        bool uniform = feedback.at("UniformImage") <= 
+            NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage;
+        std::cout << (uniform ? "✗" : "✓") 
+                  << " Image detail: " 
+                  << (uniform ? "NONE" : "OK") << std::endl;
+        
+        // Minutiae check
+        double minutiae = feedback.at("FingerprintImageWithMinutiae");
+        bool hasMinutiae = minutiae >= 
+            NFIQ2::Thresholds::ActionableQualityFeedback::FingerprintImageWithMinutiae;
+        std::cout << (hasMinutiae ? "✓" : "✗") 
+                  << " Minutiae count: " << minutiae 
+                  << (hasMinutiae ? " (OK)" : " (LOW)") << std::endl;
+        
+        // Foreground check
+        double foreground = feedback.at("SufficientFingerprintForeground");
+        bool hasForeground = foreground >= 
+            NFIQ2::Thresholds::ActionableQualityFeedback::SufficientFingerprintForeground;
+        std::cout << (hasForeground ? "✓" : "✗") 
+                  << " Foreground area: " << foreground 
+                  << (hasForeground ? " px (OK)" : " px (LOW)") << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="GUI Integration">
+    ```cpp
+    struct FeedbackStatus {
+        bool passed;
+        std::string message;
+        std::string guidance;
+    };
+    
+    std::vector<FeedbackStatus> evaluateFeedback(
+        const std::unordered_map<std::string, double>& feedback
+    ) {
+        std::vector<FeedbackStatus> results;
+        
+        // Contrast check
+        bool contrastOK = feedback.at("EmptyImageOrContrastTooLow") < 
+            NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow;
+        results.push_back({
+            contrastOK,
+            contrastOK ? "Contrast: Good" : "Contrast: Too Low",
+            "Ensure finger is firmly on sensor"
+        });
+        
+        // Add other checks...
+        
+        return results;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Web API Response">
+    ```cpp
+    std::string feedbackToJSON(
+        const std::unordered_map<std::string, double>& feedback
+    ) {
+        std::ostringstream json;
+        json << "{\n";
+        json << "  \"feedback\": {\n";
+        
+        bool contrastOK = feedback.at("EmptyImageOrContrastTooLow") < 
+            NFIQ2::Thresholds::ActionableQualityFeedback::EmptyImageOrContrastTooLow;
+        json << "    \"contrast_ok\": " << (contrastOK ? "true" : "false") << ",\n";
+        
+        bool detailOK = feedback.at("UniformImage") > 
+            NFIQ2::Thresholds::ActionableQualityFeedback::UniformImage;
+        json << "    \"has_detail\": " << (detailOK ? "true" : "false") << ",\n";
+        
+        double minutiae = feedback.at("FingerprintImageWithMinutiae");
+        json << "    \"minutiae_count\": " << minutiae << ",\n";
+        
+        double foreground = feedback.at("SufficientFingerprintForeground");
+        json << "    \"foreground_pixels\": " << foreground << "\n";
+        
+        json << "  }\n}";
+        return json.str();
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Prioritize Critical Issues">
+    Address feedback indicators in order of severity:
+    
+    1. **UniformImage**: May indicate hardware failure
+    2. **EmptyImageOrContrastTooLow**: Requires immediate operator action
+    3. **SufficientFingerprintForeground**: Needs repositioning
+    4. **FingerprintImageWithMinutiae**: May need multiple recapture attempts
+  </Accordion>
+  
+  <Accordion title="Limit Recapture Attempts">
+    Set a maximum number of recapture attempts (typically 3-5):
+    
+    ```cpp
+    const int MAX_ATTEMPTS = 3;
+    int attempts = 0;
+    
+    while (attempts < MAX_ATTEMPTS) {
+        if (captureWithFeedback(image)) {
+            break;  // Success
+        }
+        attempts++;
+        // Provide progressively more detailed guidance
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Combine with Quality Scores">
+    Use actionable feedback for **immediate** capture decisions, but always compute unified quality scores for **final** enrollment decisions.
+    
+    Actionable feedback catches obvious problems; quality scores predict matching performance.
+  </Accordion>
+  
+  <Accordion title="Customize Thresholds">
+    While NFIQ2 provides default thresholds, you may need to adjust them based on:
+    - Your specific sensor characteristics
+    - Population demographics (children, elderly)
+    - Application requirements (forensic vs. access control)
+    - Environmental conditions
+    
+    Test adjustments against actual matching performance in your environment.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting Common Issues
+
+<Tabs>
+  <Tab title="Repeated Empty Images">
+    **Symptoms**: `EmptyImageOrContrastTooLow` triggers repeatedly
+    
+    **Possible Causes**:
+    - Sensor needs cleaning
+    - Sensor lighting/exposure misconfigured
+    - Operator not positioning finger correctly
+    - Very dry or worn fingerprints
+    
+    **Solutions**:
+    - Clean sensor thoroughly
+    - Check sensor configuration
+    - Provide operator training
+    - Try different fingers
+  </Tab>
+  
+  <Tab title="Low Minutiae Count">
+    **Symptoms**: `FingerprintImageWithMinutiae` below threshold
+    
+    **Possible Causes**:
+    - Partial print (small contact area)
+    - Dry finger
+    - Worn fingerprints (elderly, manual labor)
+    - Too much/too little pressure
+    
+    **Solutions**:
+    - Guide operator to flatten finger
+    - Apply appropriate pressure
+    - Consider finger moisturizer for dry skin
+    - Capture multiple fingers
+  </Tab>
+  
+  <Tab title="Small Foreground Area">
+    **Symptoms**: `SufficientFingerprintForeground` below threshold
+    
+    **Possible Causes**:
+    - Finger off-center
+    - Fingertip-only contact
+    - Small finger (child)
+    - Edge placement
+    
+    **Solutions**:
+    - Center finger on sensor
+    - Increase contact area
+    - Adjust finger angle
+    - Use finger guides if available
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quality Scores" icon="chart-line" href="/concepts/quality-scores">
+    Understand unified quality score computation
+  </Card>
+  <Card title="Quality Measures" icon="microscope" href="/concepts/quality-measures">
+    Learn about underlying native quality measures
+  </Card>
+  <Card title="Quality Measures API" icon="code" href="/api/quality-measures">
+    Complete API documentation
+  </Card>
+  <Card title="Integration Guide" icon="plug" href="/guides/computing-scores">
+    Integrate NFIQ2 into your application
+  </Card>
+</CardGroup>

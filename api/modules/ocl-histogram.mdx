@@ -1,0 +1,219 @@
+---
+title: OCL Histogram (Orientation Certainty Level)
+description: Reference for the Orientation Certainty Level Histogram quality module
+---
+
+The **OCL Histogram** module measures the **Orientation Certainty Level** of ridge patterns across the fingerprint image. It evaluates how reliably the local ridge orientation can be determined in each region, which is crucial for accurate fingerprint matching.
+
+## Overview
+
+Orientation Certainty Level quantifies the reliability of ridge orientation estimates. High OCL values indicate clear, well-defined ridge flow patterns, while low OCL values suggest areas with unclear or disrupted orientation (scars, creases, smudges, or poor quality regions).
+
+<Info>
+OCL is a critical quality measure because many fingerprint matching algorithms rely heavily on accurate orientation field estimation. Poor orientation certainty directly impacts matching accuracy.
+</Info>
+
+## Class Definition
+
+**Header:** `quality_modules/OCLHistogram.h`
+
+```cpp
+class OCLHistogram : public Algorithm {
+public:
+    OCLHistogram(const NFIQ2::FingerprintImageData &fingerprintImage);
+    virtual ~OCLHistogram();
+    
+    std::string getName() const override;
+    static std::vector<std::string> getNativeQualityMeasureIDs();
+    static bool getOCLValueOfBlock(const cv::Mat &block, double &ocl);
+
+private:
+    std::unordered_map<std::string, double> computeFeatureData(
+        const NFIQ2::FingerprintImageData &fingerprintImage);
+};
+```
+
+**Block Size Constant:**
+```cpp
+#define BS_OCL NFIQ2::Sizes::LocalRegionSquare
+```
+
+## Constructor
+
+### OCLHistogram()
+
+```cpp
+OCLHistogram(const NFIQ2::FingerprintImageData &fingerprintImage)
+```
+
+Creates an OCL Histogram module instance and computes orientation certainty features.
+
+**Parameters:**
+- `fingerprintImage` - Input fingerprint image data at 500 dpi
+
+**Throws:**
+- `NFIQ2::Exception` - If the image resolution is not 500 dpi
+
+## Methods
+
+### getName()
+
+```cpp
+std::string getName() const override
+```
+
+Returns the module identifier: `"OrientationCertainty"`
+
+**Returns:** Module name as string
+
+### getNativeQualityMeasureIDs()
+
+```cpp
+static std::vector<std::string> getNativeQualityMeasureIDs()
+```
+
+Returns the list of quality measure identifiers produced by this module.
+
+**Returns:** Vector containing feature IDs:
+- `OCL_Bin10_0` through `OCL_Bin10_9` - 10 histogram bins
+- `OCL_Bin10_Mean` - Mean OCL value
+- `OCL_Bin10_StdDev` - Standard deviation of OCL values
+
+### getOCLValueOfBlock()
+
+```cpp
+static bool getOCLValueOfBlock(const cv::Mat &block, double &ocl)
+```
+
+Computes the OCL value for a single image block.
+
+**Parameters:**
+- `block` - Input image block (cv::Mat)
+- `ocl` - Output OCL value (passed by reference)
+
+**Returns:** `true` if OCL computation succeeded, `false` otherwise
+
+<Note>
+This static method can be used independently to compute OCL for individual blocks without creating a full OCLHistogram instance.
+</Note>
+
+## Quality Features
+
+The OCL Histogram module generates 12 quality measures:
+
+### Histogram Bins (0-9)
+
+The fingerprint image is divided into blocks of size `BS_OCL` (typically 32x32 pixels). For each full-size block, the orientation certainty level is computed and binned into one of 10 histogram categories:
+
+```cpp
+static double OCLPHISTLIMITS[9] = { 0.337, 0.479, 0.579, 0.655, 0.716, 0.766, 0.81, 0.852, 0.898 };
+```
+
+Each bin represents the proportion of blocks with OCL values in specific ranges:
+
+| Bin Range | OCL Value | Interpretation |
+|-----------|-----------|----------------|
+| Bin 0 | < 0.337 | Very poor orientation certainty |
+| Bin 1-2 | 0.337 - 0.579 | Poor certainty, unclear patterns |
+| Bin 3-5 | 0.579 - 0.766 | Moderate certainty |
+| Bin 6-8 | 0.766 - 0.898 | Good certainty, clear ridge flow |
+| Bin 9 | > 0.898 | Excellent certainty, highly defined patterns |
+
+### Statistical Measures
+
+- **OCL_Bin10_Mean:** Average OCL value across all analyzed blocks
+- **OCL_Bin10_StdDev:** Standard deviation, indicating OCL consistency across the image
+
+<Info>
+Higher mean OCL values and lower standard deviations generally indicate better overall image quality with consistent ridge patterns.
+</Info>
+
+## Configuration
+
+The module uses `BS_OCL` (defined as `NFIQ2::Sizes::LocalRegionSquare`, typically 32x32 pixels) as the block size for orientation analysis.
+
+**Important:** Only full-size blocks are processed. Partial blocks at image boundaries are ignored to ensure consistent OCL computations.
+
+## Usage Example
+
+```cpp
+#include <quality_modules/OCLHistogram.h>
+
+NFIQ2::FingerprintImageData fpImage = /* load image */;
+
+try {
+    NFIQ2::QualityMeasures::OCLHistogram oclHist(fpImage);
+    
+    // Get computed features
+    auto features = oclHist.getFeatures();
+    double meanOCL = features["OCL_Bin10_Mean"];
+    double stddevOCL = features["OCL_Bin10_StdDev"];
+    
+    // Analyze histogram distribution
+    double poorOrientationRatio = features["OCL_Bin10_0"] + 
+                                  features["OCL_Bin10_1"];
+    
+    if (poorOrientationRatio > 0.3) {
+        // More than 30% of blocks have poor orientation certainty
+    }
+    
+    // Use static method for individual block analysis
+    cv::Mat block = /* extract block from image */;
+    double oclValue;
+    if (NFIQ2::QualityMeasures::OCLHistogram::getOCLValueOfBlock(block, oclValue)) {
+        // Process OCL value for this block
+    }
+    
+} catch (const NFIQ2::Exception &e) {
+    // Handle error
+}
+```
+
+## Algorithm Details
+
+The OCL computation process:
+
+1. **Block Extraction:** Divide image into blocks of size BS_OCL × BS_OCL
+2. **Gradient Computation:** Calculate horizontal and vertical gradients for each block
+3. **Orientation Estimation:** Compute dominant ridge orientation using gradient analysis
+4. **Certainty Measurement:** Evaluate the reliability of the orientation estimate using:
+   - Coherence of gradient directions
+   - Strength of the dominant orientation
+   - Consistency within the block
+5. **Histogram Generation:** Bin OCL values and compute statistics
+
+### OCL Calculation Method
+
+The orientation certainty is typically computed using the eigenvalues of the gradient covariance matrix:
+
+- **High certainty:** Strong dominant orientation (one large eigenvalue)
+- **Low certainty:** No clear dominant orientation (similar eigenvalues)
+
+## Applications
+
+### Quality Assessment
+
+- **Minutiae extraction reliability:** High OCL regions produce more reliable minutiae
+- **Matching region selection:** Focus on high OCL areas for better matching performance
+- **Quality-driven segmentation:** Separate usable from unusable fingerprint areas
+
+### Problem Detection
+
+- **Scars and creases:** Appear as low OCL regions
+- **Smudges:** Create areas of uncertain orientation
+- **Dry/wet patches:** Affect ridge clarity and orientation certainty
+- **Core/delta regions:** May show lower OCL due to complex ridge patterns
+
+## Integration with Other Modules
+
+The OCL module is used by:
+
+- **FJFX Minutiae Quality:** Evaluates minutiae based on local OCL values
+- **Ridge Quality Map:** Creates spatial quality maps using OCL data
+- **Adaptive processing:** Adjusts algorithm parameters based on OCL
+
+## Related Modules
+
+- [FJFX Minutiae Quality](/api/modules/fjfx-minutiae) - Uses OCL for minutiae quality assessment
+- [FDA (Frequency Domain Analysis)](/api/modules/fda) - Complementary frequency-based analysis
+- [LCS (Local Clarity Score)](/api/modules/lcs) - Spatial clarity measurement

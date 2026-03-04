@@ -1,0 +1,206 @@
+---
+title: 'ModelInfo'
+description: 'Information about a random forest parameter model'
+---
+
+## Overview
+
+The `NFIQ2::ModelInfo` class contains information about a random forest parameter model used by the NFIQ2 Algorithm. This class provides metadata about the model including its name, version, trainer, and file path.
+
+## Class Definition
+
+```cpp
+namespace NFIQ2 {
+    class ModelInfo {
+        // Public interface
+    };
+}
+```
+
+## Constructors
+
+### Default Constructor
+
+```cpp
+ModelInfo();
+```
+
+Default constructor.
+
+### File-based Constructor
+
+```cpp
+ModelInfo(const std::string &modelInfoFilePath);
+```
+
+Constructor that loads model information from a file.
+
+<ParamField path="modelInfoFilePath" type="const std::string &">
+  Path to model information file.
+</ParamField>
+
+## Methods
+
+### getModelName
+
+```cpp
+std::string getModelName() const;
+```
+
+Obtain the model name.
+
+<ResponseField name="return" type="std::string">
+  Model name.
+</ResponseField>
+
+### getModelTrainer
+
+```cpp
+std::string getModelTrainer() const;
+```
+
+Obtain the entity that trained the random forest model.
+
+<ResponseField name="return" type="std::string">
+  Model trainer.
+</ResponseField>
+
+### getModelDescription
+
+```cpp
+std::string getModelDescription() const;
+```
+
+Obtain additional description information for model.
+
+<ResponseField name="return" type="std::string">
+  Model description.
+</ResponseField>
+
+### getModelVersion
+
+```cpp
+std::string getModelVersion() const;
+```
+
+Obtain the version number of the model.
+
+<ResponseField name="return" type="std::string">
+  Model version.
+</ResponseField>
+
+### getModelPath
+
+```cpp
+std::string getModelPath() const;
+```
+
+Obtain the file path of the model.
+
+<ResponseField name="return" type="std::string">
+  Model file path.
+</ResponseField>
+
+### getModelHash
+
+```cpp
+std::string getModelHash() const;
+```
+
+Obtain the md5 checksum of the model.
+
+<ResponseField name="return" type="std::string">
+  Model md5 checksum.
+</ResponseField>
+
+## Constants
+
+The class provides the following static constants for model information keys:
+
+### ModelInfoKeyName
+
+```cpp
+static const char ModelInfoKeyName[];
+```
+
+Name key identifier.
+
+### ModelInfoKeyTrainer
+
+```cpp
+static const char ModelInfoKeyTrainer[];
+```
+
+Trainer key identifier.
+
+### ModelInfoKeyDescription
+
+```cpp
+static const char ModelInfoKeyDescription[];
+```
+
+Description key identifier.
+
+### ModelInfoKeyVersion
+
+```cpp
+static const char ModelInfoKeyVersion[];
+```
+
+Version key identifier.
+
+### ModelInfoKeyPath
+
+```cpp
+static const char ModelInfoKeyPath[];
+```
+
+Path key identifier.
+
+### ModelInfoKeyHash
+
+```cpp
+static const char ModelInfoKeyHash[];
+```
+
+Hash key identifier.
+
+## Usage Example
+
+```cpp
+#include <nfiq2_modelinfo.hpp>
+#include <nfiq2_algorithm.hpp>
+
+// Load model information from file
+NFIQ2::ModelInfo modelInfo("/path/to/model_info.txt");
+
+// Display model information
+std::cout << "Model Name: " << modelInfo.getModelName() << std::endl;
+std::cout << "Version: " << modelInfo.getModelVersion() << std::endl;
+std::cout << "Trainer: " << modelInfo.getModelTrainer() << std::endl;
+std::cout << "Description: " << modelInfo.getModelDescription() << std::endl;
+std::cout << "Path: " << modelInfo.getModelPath() << std::endl;
+std::cout << "Hash: " << modelInfo.getModelHash() << std::endl;
+
+// Use ModelInfo to initialize Algorithm
+NFIQ2::Algorithm algorithm(modelInfo);
+```
+
+## Model Information File Format
+
+The model information file typically contains key-value pairs for:
+
+- **Name**: Identifier for the model
+- **Trainer**: Organization or entity that trained the model
+- **Description**: Additional details about the model's purpose or training data
+- **Version**: Version number of the model
+- **Path**: Location of the random forest parameter file
+- **Hash**: MD5 checksum for verifying model file integrity
+
+<Info>
+The ModelInfo class is commonly used in conjunction with the Algorithm constructor to specify which random forest model to use for quality scoring.
+</Info>
+
+## See Also
+
+- [Algorithm](/api/algorithm) - Uses ModelInfo for initialization

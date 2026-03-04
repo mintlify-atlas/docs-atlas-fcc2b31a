@@ -1,0 +1,318 @@
+---
+title: Native Quality Measures
+description: Extract and use individual quality measures and computation speeds
+icon: chart-line
+---
+
+While NFIQ2 produces a unified quality score (1-5), it also computes numerous native quality measures that can provide detailed insights into specific aspects of fingerprint image quality.
+
+## Overview
+
+Native quality measures are the individual quality features computed from fingerprint images before being combined into a unified score. These measures include:
+
+- **FDA**: Frequency Domain Analysis
+- **OCL**: Orientation Certainty Level
+- **RVUP**: Ridge Valley Uniformity
+- **LCS**: Local Clarity Score
+- **OF**: Orientation Flow
+- **Mu**: Mean intensity
+- **MMB**: Minutiae-based measures
+- And many more...
+
+## Computing Quality Measures
+
+There are two approaches to obtain native quality measures:
+
+### Approach 1: Direct Computation
+
+Compute quality measures directly from an image:
+
+```cpp
+#include <nfiq2.hpp>
+
+// Create fingerprint image data
+NFIQ2::FingerprintImageData rawImage = NFIQ2::FingerprintImageData(
+    data.get(), cols * rows, cols, rows, 0, 500);
+
+// Compute native quality measures
+std::unordered_map<std::string, double> qualityFeatures;
+try {
+    qualityFeatures = NFIQ2::QualityMeasures::
+        computeNativeQualityMeasures(rawImage);
+} catch (const NFIQ2::Exception &e) {
+    std::cerr << "Error: " << e.what() << '\n';
+    return EXIT_FAILURE;
+}
+
+// Access individual measures
+for (const auto &feature : qualityFeatures) {
+    std::cout << feature.first << ": " << feature.second << '\n';
+}
+```
+
+### Approach 2: From Algorithm Objects
+
+If you've already computed algorithms for the unified score, extract measures from them:
+
+```cpp
+// Step 1: Compute algorithm objects
+std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms;
+try {
+    algorithms = NFIQ2::QualityMeasures::
+        computeNativeQualityMeasureAlgorithms(rawImage);
+} catch (const NFIQ2::Exception &e) {
+    std::cerr << "Error: " << e.what() << '\n';
+    return EXIT_FAILURE;
+}
+
+// Step 2: Extract quality measures
+std::unordered_map<std::string, double> qualityFeatures =
+    NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+
+// Step 3: Use for unified score (avoiding recomputation)
+unsigned int nfiq2 = model.computeUnifiedQualityScore(algorithms);
+```
+
+<Note>
+Approach 2 is more efficient when you need both the unified score and individual measures, as it avoids recomputing the quality algorithms.
+</Note>
+
+## Listing Available Measures
+
+Get all available quality measure identifiers:
+
+```cpp
+// Get all native quality measure IDs
+std::vector<std::string> featureIDs =
+    NFIQ2::QualityMeasures::getNativeQualityMeasureIDs();
+
+std::cout << "Available quality measures:\n";
+for (const auto &featureID : featureIDs) {
+    std::cout << "  - " << featureID << '\n';
+}
+```
+
+Example output:
+```
+Available quality measures:
+  - EmptyImageOrContrastTooLow
+  - UniformImage
+  - FingerprintImageWithMinutiae
+  - SufficientFingerprintForeground
+  - FDA_Bin10_Mean
+  - FDA_Bin10_StdDev
+  - FingerJetFX_MinutiaeCount
+  - FJFXPos_Mu_MinutiaeQuality_2
+  - OCL_Bin10_Mean
+  - RVUP_Bin10_Mean
+  - ...
+```
+
+## Measuring Computation Speed
+
+NFIQ2 tracks the time taken to compute each quality measure algorithm:
+
+```cpp
+// Compute algorithms with timing
+std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms =
+    NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(rawImage);
+
+// Get computation speeds (in milliseconds)
+std::unordered_map<std::string, double> speeds =
+    NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+// Display timing information
+std::cout << "Computation speeds:\n";
+for (const auto &[algorithmID, durationMS] : speeds) {
+    std::cout << algorithmID << ": " << durationMS << " ms\n";
+}
+
+// Calculate total processing time
+double totalTime = 0.0;
+for (const auto &[_, duration] : speeds) {
+    totalTime += duration;
+}
+std::cout << "Total processing time: " << totalTime << " ms\n";
+```
+
+<Tip>
+Speed measurements are useful for performance profiling and identifying bottlenecks in your image processing pipeline.
+</Tip>
+
+## Working with Specific Measures
+
+### Accessing Individual Measures
+
+```cpp
+std::unordered_map<std::string, double> qualityFeatures =
+    NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+
+// Check if image has sufficient foreground
+if (qualityFeatures.count("SufficientFingerprintForeground")) {
+    bool hasForeground = 
+        qualityFeatures.at("SufficientFingerprintForeground") > 0.5;
+    if (!hasForeground) {
+        std::cout << "Warning: Insufficient fingerprint foreground\n";
+    }
+}
+
+// Get minutiae count
+if (qualityFeatures.count("FingerJetFX_MinutiaeCount")) {
+    double minutiaeCount = 
+        qualityFeatures.at("FingerJetFX_MinutiaeCount");
+    std::cout << "Detected " << minutiaeCount << " minutiae\n";
+}
+
+// Get orientation certainty
+if (qualityFeatures.count("OCL_Bin10_Mean")) {
+    double orientationCertainty = 
+        qualityFeatures.at("OCL_Bin10_Mean");
+    std::cout << "Orientation certainty: " << orientationCertainty << '\n';
+}
+```
+
+### Quality Measure Categories
+
+<AccordionGroup>
+  <Accordion title="Binary Quality Checks" icon="check">
+    These measures return 0 or 1 to indicate pass/fail:
+    - `EmptyImageOrContrastTooLow`: Image has sufficient contrast
+    - `UniformImage`: Image is not uniform
+    - `FingerprintImageWithMinutiae`: Minutiae were detected
+    - `SufficientFingerprintForeground`: Adequate foreground area
+  </Accordion>
+
+  <Accordion title="Frequency Domain (FDA)" icon="wave-sine">
+    Analyzes ridge frequency patterns:
+    - `FDA_Bin10_Mean`: Mean frequency domain analysis
+    - `FDA_Bin10_StdDev`: Standard deviation of FDA
+    - `FDA_Bin10_0` through `FDA_Bin10_9`: Frequency bins
+  </Accordion>
+
+  <Accordion title="Minutiae Features" icon="fingerprint">
+    Measures based on detected minutiae:
+    - `FingerJetFX_MinutiaeCount`: Total number of minutiae
+    - `FingerJetFX_MinCount_COMMinRect200x200`: Minutiae in center region
+    - `FJFXPos_Mu_MinutiaeQuality_2`: Minutiae quality metrics
+    - `FJFXPos_OCL_MinutiaeQuality_80`: High-quality minutiae count
+  </Accordion>
+
+  <Accordion title="Orientation Features" icon="compass">
+    Ridge orientation analysis:
+    - `OCL_Bin10_Mean`: Mean orientation certainty level
+    - `OCL_Bin10_StdDev`: Standard deviation of OCL
+    - `OF_Bin10_Mean`: Mean orientation flow
+    - `OrientationMap_ROIFilter_CoherenceRel`: Orientation coherence
+  </Accordion>
+
+  <Accordion title="Ridge Quality" icon="layer-group">
+    Ridge-valley structure analysis:
+    - `RVUP_Bin10_Mean`: Ridge valley uniformity
+    - `LCS_Bin10_Mean`: Local clarity score
+    - `MMB`: Minutiae-based measure
+    - `Mu`: Mean grayscale intensity
+  </Accordion>
+</AccordionGroup>
+
+## Actionable Quality Feedback
+
+In addition to raw measures, NFIQ2 provides actionable feedback for improving image quality:
+
+```cpp
+// Get actionable quality feedback IDs
+std::vector<std::string> actionableIDs =
+    NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs();
+
+// Compute actionable feedback from algorithms
+std::unordered_map<std::string, double> actionableQuality =
+    NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+
+// Display actionable feedback
+for (const auto &actionableID : actionableIDs) {
+    std::cout << actionableID << ": "
+              << actionableQuality.at(actionableID) << '\n';
+}
+```
+
+Actionable feedback can guide users to improve capture quality by identifying specific issues.
+
+## Complete Example
+
+Here's a complete example that extracts and displays all quality information:
+
+```cpp
+#include <nfiq2.hpp>
+#include <iostream>
+
+int main() {
+    // Load image (simplified)
+    NFIQ2::FingerprintImageData rawImage = /* ... */;
+
+    // Compute algorithm objects
+    std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms;
+    try {
+        algorithms = NFIQ2::QualityMeasures::
+            computeNativeQualityMeasureAlgorithms(rawImage);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error: " << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    // Extract quality measures
+    std::unordered_map<std::string, double> qualityFeatures =
+        NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+
+    std::cout << "Native Quality Measures:\n";
+    for (const auto &[featureID, value] : qualityFeatures) {
+        std::cout << "  " << featureID << ": " << value << '\n';
+    }
+
+    // Get computation speeds
+    std::unordered_map<std::string, double> speeds =
+        NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+    std::cout << "\nComputation Speeds:\n";
+    for (const auto &[algorithmID, duration] : speeds) {
+        std::cout << "  " << algorithmID << ": " << duration << " ms\n";
+    }
+
+    // Get actionable feedback
+    std::unordered_map<std::string, double> actionableQuality =
+        NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+
+    std::cout << "\nActionable Feedback:\n";
+    for (const auto &[actionableID, value] : actionableQuality) {
+        std::cout << "  " << actionableID << ": " << value << '\n';
+    }
+
+    return EXIT_SUCCESS;
+}
+```
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Quality Diagnostics" icon="stethoscope">
+    Identify specific quality issues in captured fingerprints
+  </Card>
+  <Card title="Performance Profiling" icon="gauge-high">
+    Measure and optimize processing times
+  </Card>
+  <Card title="Custom Scoring" icon="function">
+    Build custom quality metrics for specific use cases
+  </Card>
+  <Card title="Research Analysis" icon="flask">
+    Analyze individual quality components for research
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Computing Scores" icon="calculator" href="/guides/computing-scores">
+    Learn how to compute unified quality scores
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/quality-measures">
+    Detailed API documentation for quality measures
+  </Card>
+</CardGroup>

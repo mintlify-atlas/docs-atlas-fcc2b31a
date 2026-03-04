@@ -1,0 +1,239 @@
+---
+title: 'Unified Quality Scores'
+description: 'Understanding NFIQ2 unified quality scores, ISO/IEC 29794-1:2024 compliance, and how scores relate to recognition performance'
+icon: 'chart-line'
+---
+
+## Overview
+
+NFIQ2 produces **unified quality scores** that range from 0 to 100, where higher values indicate better quality fingerprint images. These scores are formally standardized as part of **ISO/IEC 29794-4:2024** and provide universally interpretable quality metrics that directly correlate with operational biometric recognition performance.
+
+<Info>
+Unified quality scores combine multiple native quality measures using a trained random forest classifier to predict how well a fingerprint image will perform in recognition tasks.
+</Info>
+
+## Score Range and Interpretation
+
+NFIQ2 quality scores follow a consistent scale:
+
+| Score Range | Quality Level | Recognition Performance |
+|-------------|---------------|-------------------------|
+| 81-100 | Excellent | Highest match accuracy |
+| 61-80 | Good | Above average performance |
+| 41-60 | Fair | Average performance |
+| 21-40 | Poor | Below average performance |
+| 0-20 | Very Poor | Significant recognition challenges |
+
+<Tip>
+The unified quality score is designed to be **monotonically related** to recognition performance. A higher score consistently predicts better matching results across different fingerprint recognition systems.
+</Tip>
+
+## ISO/IEC 29794-1:2024 Compliance
+
+NFIQ2 implements the requirements specified in ISO/IEC 29794-1:2024 (and previously 29794-4) for fingerprint image quality assessment:
+
+### Standardized Quality Scale
+
+The unified quality score uses a 0-100 scale as mandated by the standard:
+- **100**: Perfect quality (theoretical maximum)
+- **50**: Average quality baseline
+- **0**: Unusable quality
+
+### CBEFF Quality Algorithm Identifiers
+
+NFIQ2 defines version-specific CBEFF quality algorithm identifiers:
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF {
+    extern const unsigned int Vendor;        // CBEFF vendor identifier
+    extern const unsigned int NFIQ2Rev0;     // NFIQ 2.0
+    extern const unsigned int NFIQ2Rev1;     // NFIQ 2.1
+    extern const unsigned int NFIQ2Rev2;     // NFIQ 2.2
+    extern const unsigned int NFIQ2Rev3;     // NFIQ 2.3
+}
+```
+
+<Note>
+The current version (NFIQ 2.3) uses `NFIQ2Rev3` as its CBEFF identifier. This ensures compatibility and version tracking in biometric systems.
+</Note>
+
+## Computing Unified Quality Scores
+
+### Basic Usage
+
+The simplest way to compute a unified quality score:
+
+```cpp
+#include <nfiq2.hpp>
+
+// Initialize with model parameters
+NFIQ2::Algorithm algorithm;
+
+// Load fingerprint image (decompressed, 500 PPI)
+NFIQ2::FingerprintImageData fingerprintImage(
+    imageData,      // uint8_t* to raw pixel data
+    imageSize,      // size in bytes
+    width,          // image width
+    height,         // image height
+    fingerCode,     // ISO finger position code
+    500             // pixels per inch
+);
+
+// Compute quality score
+try {
+    unsigned int qualityScore = 
+        algorithm.computeUnifiedQualityScore(fingerprintImage);
+    
+    std::cout << "Quality Score: " << qualityScore << std::endl;
+} catch (const NFIQ2::Exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+}
+```
+
+### Advanced Usage with Native Quality Measures
+
+For applications that need access to individual quality measures:
+
+```cpp
+#include <nfiq2.hpp>
+
+// Compute native quality measures first
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(
+    fingerprintImage
+);
+
+// Get the unified quality score from pre-computed measures
+unsigned int qualityScore = algorithm.computeUnifiedQualityScore(algorithms);
+
+// Extract native quality measure values
+auto nativeQualityMeasures = 
+    NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+
+// Access individual measures
+for (const auto& [measureId, value] : nativeQualityMeasures) {
+    std::cout << measureId << ": " << value << std::endl;
+}
+```
+
+<Accordion title="Why compute native quality measures separately?">
+Computing native quality measures separately is useful when you need:
+- Individual quality measure values for debugging or analysis
+- Quality measure computation speeds for performance profiling
+- Quality block values for ISO/IEC 39794-2 compliance
+- Actionable quality feedback for guiding image capture
+</Accordion>
+
+## Quality Block Values
+
+NFIQ2 can map native quality measures to quality block values ([0, 100]) suitable for inclusion in **ISO/IEC 39794-2** quality blocks:
+
+```cpp
+// Get native quality measure values
+auto nativeMeasures = 
+    NFIQ2::QualityMeasures::computeNativeQualityMeasures(fingerprintImage);
+
+// Convert to quality block values (0-100 range)
+auto qualityBlockValues = 
+    NFIQ2::Algorithm::getQualityBlockValues(nativeMeasures);
+
+// Or get a single quality block value
+unsigned int blockValue = NFIQ2::Algorithm::getQualityBlockValue(
+    "FrequencyDomainAnalysis_Mean",  // measure identifier
+    nativeMeasures["FrequencyDomainAnalysis_Mean"]  // measure value
+);
+```
+
+## Recognition Performance Correlation
+
+### How Scores Predict Performance
+
+NFIQ2 quality scores are trained to predict:
+
+1. **Match Accuracy**: Higher scores correlate with fewer false non-matches and false matches
+2. **Template Quality**: Better images produce more robust and stable templates
+3. **Cross-Sensor Performance**: Quality scores help predict how well an image will work across different matchers
+
+### Validation and Training Data
+
+The NFIQ2 model is trained on:
+- **Plain optical** (total internal reflection) fingerprints
+- **Scanned ink** plain impressions
+- **500 PPI** resolution images
+- Thousands of fingerprint comparisons with known match outcomes
+
+<Warning>
+NFIQ2 is optimized for **500 PPI plain impression** fingerprints. Using it with rolled prints, different resolutions, or other capture types may produce less reliable quality predictions.
+</Warning>
+
+## Model Versions and Compatibility
+
+NFIQ2 has evolved through several versions:
+
+```cpp
+namespace NFIQ2::Identifiers::UnifiedQualityScores {
+    extern const char NFIQ2Rev0[];  // "UnifiedQualityScore_NFIQ2_0"
+    extern const char NFIQ2Rev1[];  // "UnifiedQualityScore_NFIQ2_1"
+    extern const char NFIQ2Rev2[];  // "UnifiedQualityScore_NFIQ2_2"
+    extern const char NFIQ2Rev3[];  // "UnifiedQualityScore_NFIQ2_3"
+}
+```
+
+Each version may:
+- Use different training data
+- Include refined quality measures
+- Produce different score distributions
+
+<Info>
+Always specify which NFIQ2 version you're using in your system documentation. Scores from different versions are not directly comparable.
+</Info>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Ensure Proper Image Format">
+    - Use **decompressed** 8-bit grayscale images
+    - Maintain **500 PPI** resolution
+    - Follow ISO/IEC 39794-4:2019 canonical encoding
+    - Remove compression artifacts before processing
+  </Accordion>
+
+  <Accordion title="Set Quality Thresholds">
+    Establish minimum quality thresholds based on your application:
+    - **High security**: Require scores ≥ 70
+    - **General enrollment**: Accept scores ≥ 50
+    - **Forensic applications**: May accept lower scores with manual review
+  </Accordion>
+
+  <Accordion title="Handle Quality Exceptions">
+    NFIQ2 may throw exceptions for:
+    - Images that are too small after cropping
+    - Invalid image parameters
+    - Uninitialized random forest models
+    
+    Always wrap quality score computation in try-catch blocks.
+  </Accordion>
+
+  <Accordion title="Monitor Score Distributions">
+    Track quality score distributions over time to:
+    - Identify sensor degradation
+    - Detect operator training needs
+    - Optimize capture workflow
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Native Quality Measures" icon="microscope" href="/concepts/quality-measures">
+    Learn about the individual quality measures that feed into the unified score
+  </Card>
+  <Card title="Actionable Feedback" icon="comments" href="/concepts/actionable-feedback">
+    Use quality feedback to guide image recapture and improve quality
+  </Card>
+  <Card title="Random Forest Model" icon="brain" href="/concepts/random-forest-model">
+    Understand how the ML model combines measures into scores
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/algorithm">
+    Explore the complete Algorithm API
+  </Card>
+</CardGroup>

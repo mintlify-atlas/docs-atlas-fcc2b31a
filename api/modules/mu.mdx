@@ -1,0 +1,209 @@
+---
+title: Mu (Contrast)
+description: Reference for the Mu contrast quality module
+---
+
+The **Mu** module, also known as the **Contrast** module, measures the mean intensity and contrast characteristics of fingerprint images. It evaluates both global image contrast (Mu) and local block-level contrast uniformity (MMB).
+
+## Overview
+
+The Mu module computes two key contrast-related features that are critical indicators of fingerprint image quality. Poor contrast can result from improper acquisition conditions, wet/dry fingers, or scanner limitations.
+
+<Info>
+The module name "Mu" (μ) refers to the statistical mean. The module calculates the image mean and the mean of block means to characterize contrast distribution.
+</Info>
+
+## Class Definition
+
+**Header:** `quality_modules/Mu.h`
+
+```cpp
+class Mu : public Algorithm {
+public:
+    Mu(const NFIQ2::FingerprintImageData &fingerprintImage);
+    virtual ~Mu();
+    
+    std::string getName() const override;
+    double getSigma() const;
+    static std::vector<std::string> getNativeQualityMeasureIDs();
+
+private:
+    std::unordered_map<std::string, double> computeFeatureData(
+        const NFIQ2::FingerprintImageData &fingerprintImage);
+    
+    bool sigmaComputed { false };
+    double sigma {};
+};
+```
+
+## Constructor
+
+### Mu()
+
+```cpp
+Mu(const NFIQ2::FingerprintImageData &fingerprintImage)
+```
+
+Creates a Mu module instance and computes contrast features.
+
+**Parameters:**
+- `fingerprintImage` - Input fingerprint image data at 500 dpi
+
+**Throws:**
+- `NFIQ2::Exception` - If the image resolution is not 500 dpi
+
+## Methods
+
+### getName()
+
+```cpp
+std::string getName() const override
+```
+
+Returns the module identifier: `"Contrast"`
+
+**Returns:** Module name as string
+
+### getSigma()
+
+```cpp
+double getSigma() const
+```
+
+Returns the computed sigma (standard deviation) value.
+
+**Returns:** Sigma value if computed
+
+**Throws:**
+- `NFIQ2::Exception` - If sigma has not yet been calculated
+
+### getNativeQualityMeasureIDs()
+
+```cpp
+static std::vector<std::string> getNativeQualityMeasureIDs()
+```
+
+Returns the list of quality measure identifiers produced by this module.
+
+**Returns:** Vector containing:
+- `Mu` - Image mean (global contrast)
+- `MMB` - Mean of block means (local contrast uniformity)
+
+## Quality Features
+
+The Mu module generates 2 quality measures:
+
+### Mu (Image Mean)
+
+**Feature ID:** `Mu`
+
+The global mean intensity value of the entire fingerprint image. This measure indicates overall image brightness and contrast level.
+
+**Interpretation:**
+- **Too low (< 100):** Image may be too dark, poor contrast
+- **Optimal range (100-150):** Good contrast characteristics
+- **Too high (> 150):** Image may be too bright or washed out
+
+<Note>
+Grayscale pixel values range from 0 (black) to 255 (white). An optimal fingerprint image typically has a mean around 127, indicating balanced ridge (dark) and valley (light) representation.
+</Note>
+
+### MMB (Mean of Block Means)
+
+**Feature ID:** `MMB`
+
+The mean of all block-level mean values. The image is divided into blocks, the mean intensity of each block is calculated, and then the average of these block means is computed.
+
+**Interpretation:**
+- **Similar to Mu:** Indicates consistent contrast distribution
+- **Significantly different from Mu:** Suggests uneven illumination or contrast variations
+
+**Algorithm:**
+1. Divide image into blocks (typically 32x32 pixels)
+2. Calculate mean intensity for each block
+3. Compute the average of all block means
+
+```cpp
+// Simplified algorithm
+const unsigned int blockSize = Sizes::LocalRegionSquare;
+std::vector<double> vecMeans;
+
+for (unsigned int i = 0; i < height; i += blockSize) {
+    for (unsigned int j = 0; j < width; j += blockSize) {
+        cv::Mat block = img(cv::Rect(j, i, takenBS_X, takenBS_Y));
+        cv::Scalar m = mean(block);
+        vecMeans.push_back(m.val[0]);
+    }
+}
+
+// Calculate MMB
+double mmb = 0.0;
+for (auto mean : vecMeans) {
+    mmb += mean / vecMeans.size();
+}
+```
+
+## Configuration
+
+The module uses local region blocks defined by `Sizes::LocalRegionSquare` (typically 32x32 pixels) for computing the MMB feature.
+
+## Usage Example
+
+```cpp
+#include <quality_modules/Mu.h>
+
+NFIQ2::FingerprintImageData fpImage = /* load image */;
+
+try {
+    NFIQ2::QualityMeasures::Mu mu(fpImage);
+    
+    // Get computed features
+    auto features = mu.getFeatures();
+    double imageMean = features["Mu"];
+    double blockMeanAvg = features["MMB"];
+    
+    // Check contrast quality
+    if (imageMean < 100 || imageMean > 150) {
+        // Poor contrast detected
+    }
+    
+    // Check contrast uniformity
+    double contrastVariation = std::abs(imageMean - blockMeanAvg);
+    if (contrastVariation > 10) {
+        // Uneven contrast distribution
+    }
+    
+    // Get sigma if available
+    try {
+        double sigma = mu.getSigma();
+        // Use sigma value
+    } catch (const NFIQ2::Exception &e) {
+        // Sigma not computed
+    }
+    
+} catch (const NFIQ2::Exception &e) {
+    // Handle error
+}
+```
+
+## Use Cases
+
+### Detecting Acquisition Problems
+
+- **Wet fingers:** Often result in very low Mu values (dark image)
+- **Dry fingers:** Often result in very high Mu values (light image, poor ridge definition)
+- **Dirty platen:** May cause localized contrast variations (Mu vs MMB difference)
+- **Poor sensor calibration:** Consistent deviation from optimal range
+
+### Quality Assessment
+
+The Mu module features are used in the NFIQ 2.0 quality score computation as indicators of:
+- Overall image contrast suitability for matching
+- Uniformity of contrast across the fingerprint area
+- Potential acquisition or sensor issues
+
+## Related Modules
+
+- [LCS (Local Clarity Score)](/api/modules/lcs) - Evaluates local sharpness and clarity
+- [FDA (Frequency Domain Analysis)](/api/modules/fda) - Analyzes frequency characteristics
+- [FJFX Minutiae Quality](/api/modules/fjfx-minutiae) - Uses MMB for minutiae region analysis

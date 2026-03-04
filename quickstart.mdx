@@ -1,80 +1,343 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Compute your first NFIQ2 quality score in minutes
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through computing your first NFIQ2 quality score using the C++ API. You'll learn how to load a fingerprint image, compute quality measures, and obtain a unified quality score.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This guide uses the C++ API. If you prefer using the command-line tool, see the [CLI Reference](/cli/overview) documentation.
 </Note>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- NFIQ2 installed (see [Installation](/installation))
+- A C++ compiler (GCC 7+, Clang 10+, or MSVC 2019+)
+- A 500 PPI fingerprint image in PGM format
+
+## Your First Quality Score
+
+<Steps>
+  <Step title="Include the NFIQ2 Header">
+    Include the universal NFIQ2 header in your source file:
+    
+    ```cpp
+    #include <nfiq2.hpp>
+    #include <iostream>
+    #include <memory>
+    ```
+    
+    This single header provides access to all NFIQ2 functionality.
+  </Step>
+  
+  <Step title="Load the Random Forest Model">
+    NFIQ2 requires a trained random forest model to compute quality scores. You can either use an embedded model or load one at runtime.
+    
+    <Tabs>
+      <Tab title="Runtime Model Loading">
+        ```cpp
+        // Load model information file
+        NFIQ2::ModelInfo modelInfoObj { "nist_plain_tir-ink.txt" };
+        
+        // Initialize the algorithm with the model
+        NFIQ2::Algorithm model { modelInfoObj };
+        ```
+        
+        The model file (e.g., `nist_plain_tir-ink.txt`) is included in the NFIQ2 release packages.
+      </Tab>
+      
+      <Tab title="Embedded Model">
+        ```cpp
+        // If built with embedded model, simply instantiate
+        NFIQ2::Algorithm model {};
+        
+        // Verify the model is embedded
+        if (!model.isEmbedded()) {
+            std::cerr << "Model is not embedded.\n";
+            return EXIT_FAILURE;
+        }
+        ```
+        
+        <Note>
+          Embedded models must be configured at compile time using CMake options.
+        </Note>
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Load Your Fingerprint Image">
+    Create a `FingerprintImageData` object with your image data:
+    
+    ```cpp
+    // Image parameters
+    const uint16_t PPI = 500;  // NFIQ2 requires 500 PPI
+    uint32_t width = 500;       // Image width in pixels
+    uint32_t height = 500;      // Image height in pixels
+    uint8_t fingerCode = 0;     // Finger position code
+    
+    // Your raw image data (8-bit grayscale)
+    std::shared_ptr<uint8_t> imageData = loadYourImage();
+    
+    // Create fingerprint image data object
+    NFIQ2::FingerprintImageData rawImage {
+        imageData.get(),
+        width * height,  // Data size
+        width,
+        height,
+        fingerCode,
+        PPI
+    };
+    ```
+    
+    <Warning>
+      NFIQ2 only operates on images captured at **500 PPI**. Using images at different resolutions will produce erroneous results.
+    </Warning>
+  </Step>
+  
+  <Step title="Compute Quality Measures">
+    Calculate the native quality measures from the fingerprint image:
+    
+    ```cpp
+    // Compute native quality measures
+    std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms;
+    
+    try {
+        algorithms = NFIQ2::QualityMeasures::
+            computeNativeQualityMeasureAlgorithms(rawImage);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error calculating quality features: "
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+    ```
+    
+    This step extracts multiple quality features from the image, such as:
+    - Frequency domain analysis
+    - Ridge-valley uniformity
+    - Minutiae quality
+    - Local clarity
+    - Orientation flow
+  </Step>
+  
+  <Step title="Get the Unified Quality Score">
+    Pass the quality measures through the random forest to obtain a unified score:
+    
+    ```cpp
+    // Compute unified quality score (0-100)
+    unsigned int nfiq2Score;
+    
+    try {
+        nfiq2Score = model.computeUnifiedQualityScore(algorithms);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error calculating NFIQ2 score: "
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+    
+    std::cout << "UnifiedQualityScore: " << nfiq2Score << '\n';
+    ```
+    
+    The score ranges from 0 (lowest quality) to 100 (highest quality).
+  </Step>
+</Steps>
+
+## Complete Working Example
+
+Here's the complete code from the official NFIQ2 repository (`examples/example_api.cpp`):
+
+```cpp example_api.cpp
+// Universal include for all NFIQ2 headers
+#include <nfiq2.hpp>
+
+#include <iostream>
+#include <memory>
+#include <fstream>
+
+int main(int argc, char **argv)
+{
+    // NFIQ2 requires 500 PPI images
+    static const uint16_t PPI = 500;
+
+#if defined(NFIQ2_EMBEDDED_MODEL)
+    // Use embedded model
+    NFIQ2::Algorithm model {};
+    if (!model.isEmbedded()) {
+        std::cerr << "Model is not embedded.\n";
+        return EXIT_FAILURE;
+    }
+#else
+    // Load model from file
+    NFIQ2::ModelInfo modelInfoObj {};
+    try {
+        modelInfoObj = NFIQ2::ModelInfo(argv[1]);
+    } catch (...) {
+        std::cerr << "Could not parse model info file.\n";
+        return EXIT_FAILURE;
+    }
+
+    NFIQ2::Algorithm model {};
+    try {
+        model = NFIQ2::Algorithm(modelInfoObj);
+    } catch (...) {
+        std::cerr << "Could not initialize model.\n";
+        return EXIT_FAILURE;
+    }
+#endif
+
+    // Load your fingerprint image data
+    // (Image loading code omitted - see repository for PGM parser)
+    uint32_t rows, cols;
+    std::shared_ptr<uint8_t> data;
+    // ... load image into data, rows, cols ...
+
+    // Create fingerprint image data object
+    NFIQ2::FingerprintImageData rawImage {
+        data.get(),
+        cols * rows,
+        cols,
+        rows,
+        0,      // Finger code
+        PPI
+    };
+
+    // Calculate native quality measures
+    std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms {};
+    try {
+        algorithms = NFIQ2::QualityMeasures::
+            computeNativeQualityMeasureAlgorithms(rawImage);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error in calculating quality features: "
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    // Compute unified quality score
+    unsigned int nfiq2 {};
+    try {
+        nfiq2 = model.computeUnifiedQualityScore(algorithms);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error in calculating NFIQ2 score: "
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "UnifiedQualityScore: " << nfiq2 << '\n';
+
+    // Optionally: Get actionable feedback
+    std::vector<std::string> actionableIDs =
+        NFIQ2::QualityMeasures::getActionableQualityFeedbackIDs();
+    
+    std::unordered_map<std::string, double> actionableQuality =
+        NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+    
+    for (const auto &actionableID : actionableIDs) {
+        std::cout << actionableID << ": "
+                  << actionableQuality.at(actionableID) << '\n';
+    }
+
+    return EXIT_SUCCESS;
+}
+```
+
+## Compile and Run
+
+Compile your program and link against the NFIQ2 library:
+
+<CodeGroup>
+```bash Linux / macOS
+g++ -std=c++14 \
+    -I/usr/local/nfiq2/include \
+    -L/usr/local/nfiq2/lib \
+    -o my_nfiq2_app \
+    my_nfiq2_app.cpp \
+    -lnfiq2
+
+# Run with model file and image
+./my_nfiq2_app nist_plain_tir-ink.txt fingerprint.pgm
+```
+
+```bash Windows (MSVC)
+cl /EHsc /std:c++14 ^
+    /I"C:\Program Files\NFIQ 2\include" ^
+    /Fe: my_nfiq2_app.exe ^
+    my_nfiq2_app.cpp ^
+    /link "C:\Program Files\NFIQ 2\lib\nfiq2.lib"
+
+# Run with model file and image
+my_nfiq2_app.exe nist_plain_tir-ink.txt fingerprint.pgm
+```
+</CodeGroup>
+
+## Understanding the Output
+
+The program outputs the unified quality score and actionable feedback:
+
+```text
+UnifiedQualityScore: 78
+EmptyImageOrContrastTooLow: 0
+UniformImage: 0
+FingerprintImageWithMinutiae: 1
+SufficientFingerprintForeground: 1
+```
+
+### Score Interpretation
+
+- **0-30**: Poor quality - likely to cause recognition failures
+- **31-50**: Below average quality - may cause issues
+- **51-70**: Average quality - acceptable for most uses
+- **71-90**: Good quality - reliable for recognition
+- **91-100**: Excellent quality - optimal for recognition
+
+<Note>
+  Scores follow the ISO/IEC 29794-1:2024 standard, where higher values indicate better quality.
+</Note>
+
+## Getting More Information
+
+Beyond the unified score, you can extract individual native quality measures:
+
+```cpp
+// Get all native quality measure IDs
+std::vector<std::string> featureIDs =
+    NFIQ2::QualityMeasures::getNativeQualityMeasureIDs();
+
+// Get all native quality measure values
+std::unordered_map<std::string, double> qualityFeatures =
+    NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+
+// Print each quality measure
+for (const auto &featureID : featureIDs) {
+    std::cout << featureID << ": "
+              << qualityFeatures.at(featureID) << '\n';
+}
+```
+
+This outputs detailed metrics like:
+- Frequency Domain Analysis features
+- Minutiae quality measures
+- Orientation certainty
+- Local clarity scores
+- Ridge-valley uniformity
+
+## Common Issues
+
+<Warning>
+  **Image must be 500 PPI**: NFIQ2 is calibrated for 500 PPI images. Using other resolutions will produce incorrect results.
+</Warning>
+
+<Warning>
+  **Decompressed images only**: NFIQ2 requires raw 8-bit grayscale pixel data. Decode JPEG, PNG, or other compressed formats before processing.
+</Warning>
+
+<Warning>
+  **Canonical encoding**: Images should be canonically encoded as per ISO/IEC 39794-4:2019 (white = ridge, black = valley).
+</Warning>
+
+## Next Steps
+
+- Explore the [API Reference](/api/algorithm) for detailed documentation
+- Learn about [Native Quality Measures](/concepts/quality-measures)
+- See [Actionable Feedback](/concepts/actionable-feedback) for capture guidance
+- Review the [complete examples](https://github.com/usnistgov/NFIQ2/tree/master/examples) in the repository

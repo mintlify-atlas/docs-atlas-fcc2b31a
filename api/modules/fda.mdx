@@ -1,0 +1,159 @@
+---
+title: FDA (Frequency Domain Analysis)
+description: Reference for the Frequency Domain Analysis quality module
+---
+
+The **FDA (Frequency Domain Analysis)** module analyzes fingerprint ridge frequency patterns in the frequency domain to assess image quality. It computes histogram-based features that characterize the distribution of dominant frequencies across the fingerprint image.
+
+## Overview
+
+Frequency Domain Analysis transforms image blocks into the frequency domain to measure ridge-valley structure clarity. The module divides the fingerprint image into blocks and analyzes the frequency characteristics of each block, creating a histogram distribution that represents the overall frequency patterns.
+
+<Info>
+The FDA module is particularly effective at detecting blur and poor ridge-valley contrast, which manifest as anomalies in the frequency domain.
+</Info>
+
+## Class Definition
+
+**Header:** `quality_modules/FDA.h`
+
+```cpp
+class FDA : public Algorithm {
+public:
+    FDA(const NFIQ2::FingerprintImageData &fingerprintImage);
+    virtual ~FDA();
+    
+    std::string getName() const override;
+    static std::vector<std::string> getNativeQualityMeasureIDs();
+    static const char moduleName[];
+
+private:
+    std::unordered_map<std::string, double> computeFeatureData(
+        const NFIQ2::FingerprintImageData &fingerprintImage);
+    
+    const int blocksize { Sizes::LocalRegionSquare };
+    const double threshold { .1 };
+    const int slantedBlockSizeX { Sizes::VerticallyAlignedLocalRegionWidth };
+    const int slantedBlockSizeY { Sizes::VerticallyAlignedLocalRegionHeight };
+    const bool padFlag { true };
+};
+```
+
+## Constructor
+
+### FDA()
+
+```cpp
+FDA(const NFIQ2::FingerprintImageData &fingerprintImage)
+```
+
+Creates an FDA module instance and computes frequency domain features.
+
+**Parameters:**
+- `fingerprintImage` - Input fingerprint image data at 500 dpi
+
+**Throws:**
+- `NFIQ2::Exception` - If the image resolution is not 500 dpi
+
+## Methods
+
+### getName()
+
+```cpp
+std::string getName() const override
+```
+
+Returns the module identifier: `"FrequencyDomainAnalysis"`
+
+**Returns:** Module name as string
+
+### getNativeQualityMeasureIDs()
+
+```cpp
+static std::vector<std::string> getNativeQualityMeasureIDs()
+```
+
+Returns the list of quality measure identifiers produced by this module.
+
+**Returns:** Vector containing feature IDs:
+- `FDA_Bin10_0` through `FDA_Bin10_9` - 10 histogram bins
+- `FDA_Bin10_Mean` - Mean of frequency values
+- `FDA_Bin10_StdDev` - Standard deviation of frequency values
+
+## Quality Features
+
+The FDA module generates 12 quality measures:
+
+### Histogram Bins (0-9)
+
+The fingerprint image is divided into blocks, and frequency domain analysis is performed on each block. The resulting frequency values are binned into 10 histogram categories based on predefined thresholds:
+
+```cpp
+static double FDAHISTLIMITS[9] = { 0.268, 0.304, 0.33, 0.355, 0.38, 0.407, 0.44, 0.50, 1 };
+```
+
+Each bin represents the proportion of blocks falling within a specific frequency range:
+- **Lower bins (0-2):** Low frequency content, indicating potential blur or poor clarity
+- **Middle bins (3-6):** Normal ridge frequency range for good quality fingerprints
+- **Higher bins (7-9):** High frequency content, may indicate noise or over-sharpening
+
+### Statistical Measures
+
+- **FDA_Bin10_Mean:** Average frequency value across all analyzed blocks
+- **FDA_Bin10_StdDev:** Standard deviation, measuring frequency consistency
+
+<Note>
+The FDA module requires 500 dpi fingerprint images. Images at other resolutions will trigger an exception.
+</Note>
+
+## Configuration
+
+The module uses the following default parameters:
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `blocksize` | `Sizes::LocalRegionSquare` | Size of blocks for analysis |
+| `threshold` | 0.1 | Minimum threshold for valid blocks |
+| `slantedBlockSizeX` | `Sizes::VerticallyAlignedLocalRegionWidth` | Width for oriented blocks |
+| `slantedBlockSizeY` | `Sizes::VerticallyAlignedLocalRegionHeight` | Height for oriented blocks |
+| `padFlag` | true | Enable padding for rotated blocks |
+
+## Usage Example
+
+```cpp
+#include <quality_modules/FDA.h>
+
+NFIQ2::FingerprintImageData fpImage = /* load image */;
+
+try {
+    NFIQ2::QualityMeasures::FDA fda(fpImage);
+    
+    // Get all feature IDs
+    auto featureIDs = NFIQ2::QualityMeasures::FDA::getNativeQualityMeasureIDs();
+    
+    // Access computed features
+    auto features = fda.getFeatures();
+    double mean = features["FDA_Bin10_Mean"];
+    double stddev = features["FDA_Bin10_StdDev"];
+    
+} catch (const NFIQ2::Exception &e) {
+    // Handle error (e.g., wrong resolution)
+}
+```
+
+## Algorithm Details
+
+The FDA algorithm:
+
+1. Divides the fingerprint image into blocks (typically 32x32 pixels)
+2. Applies Fast Fourier Transform (FFT) to each block
+3. Analyzes the dominant frequency components
+4. Computes frequency metrics aligned with ridge orientation
+5. Creates a histogram distribution of frequency values
+6. Calculates mean and standard deviation statistics
+
+## Related Modules
+
+- [LCS (Local Clarity Score)](/api/modules/lcs) - Analyzes spatial domain clarity
+- [OCL Histogram](/api/modules/ocl-histogram) - Measures orientation certainty
+- [Mu](/api/modules/mu) - Evaluates contrast characteristics

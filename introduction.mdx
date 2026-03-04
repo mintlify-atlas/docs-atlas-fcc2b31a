@@ -1,0 +1,88 @@
+---
+title: Introduction
+description: Overview of NFIQ2, the NIST Fingerprint Image Quality assessment tool
+---
+
+## What is NFIQ2?
+
+NIST Fingerprint Image Quality (NFIQ) 2 is open source software developed by the [National Institute of Standards and Technology (NIST)](https://www.nist.gov) that links image quality of optical and ink plain impression 500 pixel per inch fingerprints to operational recognition performance.
+
+NFIQ2 allows quality values to be tightly defined and numerically calibrated, enabling the standardization needed to support worldwide deployment of fingerprint sensors with universally-interpretable image qualities.
+
+## Key Features
+
+- **Higher Resolution Scores**: Provides quality scores in the range of 0-100, adhering to [ISO/IEC 29794-1:2024](https://www.iso.org/standard/79519.html)
+- **Standards Compliant**: Formally recognized as a reference implementation of [ISO/IEC 29794-4:2024](https://www.iso.org/standard/83827.html)
+- **Lower Complexity**: Optimized computation compared to the original NFIQ
+- **Mobile Support**: Designed for quality assessment on mobile platforms
+- **Native Quality Measures**: Provides detailed quality metrics beyond the unified score
+
+## How It Works
+
+NFIQ2 analyzes fingerprint images and computes:
+
+1. **Native Quality Measures**: Individual quality features extracted from the fingerprint image
+2. **Unified Quality Score**: A single score (0-100) computed by applying a trained random forest model to the native quality measures
+3. **Actionable Feedback**: Guidance on specific quality issues that can be addressed
+
+<Note>
+  NFIQ2 is designed for **500 PPI** optical or ink plain impression fingerprints. Using images at different resolutions may produce unreliable results.
+</Note>
+
+## ISO/IEC 29794-4 Compliance
+
+NFIQ2 quality features are formally standardized as part of [ISO/IEC 29794-4](https://www.iso.org/standard/83827.html). This repository serves as a formally-recognized reference implementation of the 2024 international standard.
+
+The software was updated in sync as version 2.3 with the second edition revision effort, ensuring full compliance with the latest standard requirements.
+
+## History
+
+In 2004, NIST developed the first open source and publicly available fingerprint quality assessment tool, NFIQ. NFIQ2 is a comprehensive revision of that tool.
+
+Advances in fingerprint technology since 2004 necessitated an update to NFIQ. Development of NFIQ2 was initiated in 2011 as a collaboration between:
+
+- **NIST** (United States)
+- **Federal Office for Information Security (BSI)** (Germany)
+- **Federal Criminal Police Office (BKA)** (Germany)
+- **MITRE** (Research and Development)
+- **Fraunhofer IGD** (Research Institute)
+- **Hochschule Darmstadt (h_da)** (University)
+- **Secunet** (Security Technology)
+
+Subsequent development efforts and improvements have been supported by experts from [ISO/IEC JTC 1/Subcommittee 37](https://www.iso.org/committee/313770.html) and the [community](https://github.com/usnistgov/NFIQ2/graphs/contributors).
+
+## Use Cases
+
+NFIQ2 increases the reliability, accuracy, and interoperability of fingerprint recognition systems by identifying samples that are likely to cause recognition failure.
+
+### Operational Applications
+
+- **Quality Control**: Reject poor quality fingerprints at capture time
+- **System Optimization**: Route high-quality samples to faster matchers
+- **Performance Prediction**: Estimate likelihood of successful matching
+- **Sensor Evaluation**: Compare fingerprint capture devices
+- **Training**: Provide feedback to operators on capture technique
+
+### Integration Scenarios
+
+- Embedded in fingerprint capture devices
+- Part of biometric enrollment workflows
+- Quality gates in identity management systems
+- Research and development of fingerprint algorithms
+- Compliance testing for biometric systems
+
+<Warning>
+  NFIQ2 requires decompressed 8-bit grayscale fingerprint images. Compressed formats (JPEG, PNG, etc.) must be decoded before processing.
+</Warning>
+
+## Learn More
+
+For detailed technical information, please read:
+
+- [NFIQ 2 Report (NIST.IR.8382)](https://doi.org/10.6028/NIST.IR.8382)
+- [ISO/IEC 29794-4:2024](https://www.iso.org/standard/83827.html)
+- [GitHub Repository](https://github.com/usnistgov/NFIQ2)
+
+## License
+
+NFIQ2 is released in the public domain. See the [LICENSE](https://github.com/usnistgov/NFIQ2/blob/master/LICENSE.md) for complete licensing details.

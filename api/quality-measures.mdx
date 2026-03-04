@@ -1,0 +1,217 @@
+---
+title: 'Quality Measures'
+description: 'Core functions for computing native quality measures and actionable quality feedback'
+---
+
+The `NFIQ2::QualityMeasures` namespace provides functions to compute native quality measures and actionable quality feedback from fingerprint images.
+
+## Overview
+
+Quality measures are individual metrics that assess specific aspects of fingerprint image quality, such as orientation certainty, local clarity, contrast, and minutiae characteristics. These measures can be computed independently or as part of the unified quality scoring process.
+
+## Compute Functions
+
+These functions compute quality measures directly from fingerprint image data.
+
+### computeNativeQualityMeasureAlgorithms
+
+```cpp
+std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>
+computeNativeQualityMeasureAlgorithms(
+    const NFIQ2::FingerprintImageData &rawImage);
+```
+
+Compute native quality measures and return the evaluated algorithm objects.
+
+<ParamField path="rawImage" type="const NFIQ2::FingerprintImageData &" required>
+  Fingerprint image in raw format. The image must be 500 PPI grayscale data, canonically encoded per ISO/IEC 39794-4:2019.
+</ParamField>
+
+<ResponseField name="return" type="std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>">
+  A vector of evaluated native quality measure algorithms. Each algorithm object contains computed quality measure values and metadata.
+</ResponseField>
+
+**Example:**
+```cpp
+#include <nfiq2_qualitymeasures.hpp>
+#include <nfiq2_fingerprintimagedata.hpp>
+
+NFIQ2::FingerprintImageData image(data, size, width, height, 0, 500);
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+```
+
+---
+
+### computeNativeQualityMeasures
+
+```cpp
+std::unordered_map<std::string, double>
+computeNativeQualityMeasures(
+    const NFIQ2::FingerprintImageData &rawImage);
+```
+
+Compute native quality measure values as a map of identifiers to values.
+
+<ParamField path="rawImage" type="const NFIQ2::FingerprintImageData &" required>
+  Fingerprint image in raw format. The image must be 500 PPI grayscale data, canonically encoded per ISO/IEC 39794-4:2019.
+</ParamField>
+
+<ResponseField name="return" type="std::unordered_map<std::string, double>">
+  A map of quality measure identifiers to native quality measure values. Keys are identifiers from `NFIQ2::Identifiers::QualityMeasures`.
+</ResponseField>
+
+**See also:** [Quality Measure Identifiers](/api/quality-measure-identifiers)
+
+**Example:**
+```cpp
+auto measures = NFIQ2::QualityMeasures::computeNativeQualityMeasures(image);
+
+for (const auto &[id, value] : measures) {
+    std::cout << id << ": " << value << std::endl;
+}
+```
+
+---
+
+### computeActionableQualityFeedback
+
+```cpp
+std::unordered_map<std::string, double>
+computeActionableQualityFeedback(
+    const NFIQ2::FingerprintImageData &rawImage);
+```
+
+Compute actionable quality feedback values that indicate potential corrective measures for subsequent captures.
+
+<ParamField path="rawImage" type="const NFIQ2::FingerprintImageData &" required>
+  Fingerprint image in raw format. The image must be 500 PPI grayscale data, canonically encoded per ISO/IEC 39794-4:2019.
+</ParamField>
+
+<ResponseField name="return" type="std::unordered_map<std::string, double>">
+  A map of actionable quality identifiers to actionable quality values. Keys are identifiers from `NFIQ2::Identifiers::ActionableQualityFeedback`. Values should be compared against thresholds in `NFIQ2::Thresholds::ActionableQualityFeedback`.
+</ResponseField>
+
+**See also:**
+- [Quality Measure Identifiers](/api/quality-measure-identifiers)
+- `NFIQ2::Thresholds::ActionableQualityFeedback`
+
+**Example:**
+```cpp
+auto feedback = NFIQ2::QualityMeasures::computeActionableQualityFeedback(image);
+
+// Check if image has sufficient contrast
+if (feedback["EmptyImageOrContrastTooLow"] > threshold) {
+    std::cout << "Warning: Image may have insufficient contrast" << std::endl;
+}
+```
+
+---
+
+## Extraction Functions
+
+These functions extract quality measure values from already-computed algorithm objects.
+
+### getActionableQualityFeedback
+
+```cpp
+std::unordered_map<std::string, double>
+getActionableQualityFeedback(
+    const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>
+        &algorithms);
+```
+
+Obtain actionable quality feedback from computed quality measure algorithms.
+
+<ParamField path="algorithms" type="const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> &" required>
+  Computed native quality measure algorithms, typically from `computeNativeQualityMeasureAlgorithms()`.
+</ParamField>
+
+<ResponseField name="return" type="std::unordered_map<std::string, double>">
+  A map of actionable quality identifiers to actionable quality values. Keys are identifiers from `NFIQ2::Identifiers::ActionableQualityFeedback`.
+</ResponseField>
+
+**Example:**
+```cpp
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+auto feedback = NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+```
+
+---
+
+### getNativeQualityMeasures
+
+```cpp
+std::unordered_map<std::string, double>
+getNativeQualityMeasures(
+    const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>>
+        &algorithms);
+```
+
+Obtain native quality measures from computed native quality measure algorithms.
+
+<ParamField path="algorithms" type="const std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> &" required>
+  Computed native quality measure algorithms, typically from `computeNativeQualityMeasureAlgorithms()`.
+</ParamField>
+
+<ResponseField name="return" type="std::unordered_map<std::string, double>">
+  A map of quality measure identifiers to quality measure values. Keys are identifiers from `NFIQ2::Identifiers::QualityMeasures`.
+</ResponseField>
+
+**Example:**
+```cpp
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+auto measures = NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+
+double orientationMean = measures["OrientationCertainty_Mean"];
+```
+
+---
+
+## Usage Patterns
+
+### Direct Computation
+
+For simple use cases, compute quality measures directly:
+
+```cpp
+NFIQ2::FingerprintImageData image(data, size, width, height, 0, 500);
+auto measures = NFIQ2::QualityMeasures::computeNativeQualityMeasures(image);
+```
+
+### Reusing Computed Algorithms
+
+For efficiency when you need multiple outputs, compute algorithms once and extract values:
+
+```cpp
+// Compute algorithms once
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+
+// Extract multiple outputs
+auto measures = NFIQ2::QualityMeasures::getNativeQualityMeasures(algorithms);
+auto feedback = NFIQ2::QualityMeasures::getActionableQualityFeedback(algorithms);
+auto speeds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+```
+
+### Performance Monitoring
+
+Track computation time for each quality measure algorithm:
+
+```cpp
+auto algorithms = NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms(image);
+auto speeds = NFIQ2::QualityMeasures::getNativeQualityMeasureAlgorithmSpeeds(algorithms);
+
+for (const auto &[alg, ms] : speeds) {
+    std::cout << alg << " took " << ms << " ms" << std::endl;
+}
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Quality Measure Algorithms" icon="gear" href="/api/quality-measure-algorithms">
+    Learn about the Algorithm class and related functions
+  </Card>
+  <Card title="Quality Measure Identifiers" icon="tag" href="/api/quality-measure-identifiers">
+    View all available quality measure and feedback identifiers
+  </Card>
+</CardGroup>

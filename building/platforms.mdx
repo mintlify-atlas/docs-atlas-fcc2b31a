@@ -1,0 +1,489 @@
+---
+title: Platform-Specific Notes
+description: Platform-specific build instructions, requirements, and known limitations
+---
+
+NFIQ 2 supports multiple platforms with varying levels of complexity. This page details platform-specific considerations and workarounds.
+
+## Windows
+
+### Build Requirements
+
+- **Visual Studio 2015 or later** (2019/2022 recommended)
+- **CMake 3.3+**
+- **vcpkg** for dependency management
+
+### Using vcpkg
+
+Windows builds require [vcpkg](https://github.com/microsoft/vcpkg) to manage `libbiomeval` dependencies.
+
+<Steps>
+  <Step title="Install vcpkg">
+    ```powershell
+    git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+    cd C:\vcpkg
+    .\bootstrap-vcpkg.bat
+    ```
+  </Step>
+  
+  <Step title="Install NFIQ 2 dependencies">
+    ```powershell
+    .\vcpkg install berkeleydb:x64-windows-static hwloc:x64-windows-static ^
+      libjpeg-turbo:x64-windows-static openjpeg:x64-windows-static ^
+      libpng:x64-windows-static openssl:x64-windows-static ^
+      sqlite3:x64-windows-static tiff:x64-windows-static ^
+      zlib:x64-windows-static zstd:x64-windows-static
+    ```
+    
+    For 32-bit builds, use `x86-windows-static` instead.
+  </Step>
+  
+  <Step title="Configure CMake with vcpkg toolchain">
+    ```powershell
+    cmake .. ^
+      -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+      -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+      -DCMAKE_CONFIGURATION_TYPES=Release ^
+      -A x64
+    ```
+  </Step>
+  
+  <Step title="Build">
+    ```powershell
+    cmake --build . --config Release
+    ```
+  </Step>
+</Steps>
+
+### Architecture Selection
+
+Use the `-A` flag to specify the target architecture:
+
+<CodeGroup>
+```powershell 64-bit (x64)
+cmake .. -A x64 -DVCPKG_TARGET_TRIPLET=x64-windows-static
+```
+
+```powershell 32-bit (Win32)
+cmake .. -A Win32 -DVCPKG_TARGET_TRIPLET=x86-windows-static
+```
+</CodeGroup>
+
+### Static vs. Dynamic Linking
+
+For standalone executables without external DLL dependencies, use static triplets:
+
+```powershell
+# Static linking (recommended for distribution)
+-DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+# Dynamic linking (for development)
+-DVCPKG_TARGET_TRIPLET=x64-windows
+```
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="vcpkg not found">
+    Ensure the `CMAKE_TOOLCHAIN_FILE` path points to your vcpkg installation:
+    
+    ```powershell
+    -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake
+    ```
+  </Accordion>
+  
+  <Accordion title="Missing DLLs at runtime">
+    Use static triplets (`x64-windows-static`) to avoid DLL dependencies, or copy required DLLs from vcpkg's `installed` directory.
+  </Accordion>
+  
+  <Accordion title="Linker errors with mixed architectures">
+    Ensure `VCPKG_TARGET_TRIPLET` matches the CMake architecture:
+    
+    - `-A x64` → `x64-windows-static`
+    - `-A Win32` → `x86-windows-static`
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## macOS
+
+### Build Requirements
+
+- **Xcode 10+** (Xcode 15+ recommended)
+- **Command Line Tools:** `xcode-select --install`
+- **MacPorts** or **Homebrew** for dependencies
+
+### Using MacPorts (Recommended)
+
+<Steps>
+  <Step title="Install MacPorts">
+    Download and install from [macports.org](https://www.macports.org/install.php)
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    sudo port install berkeley-db cmake hwloc jpeg openjpeg libpng \
+      openssl sqlite3 tiff xz zlib zstd
+    ```
+  </Step>
+  
+  <Step title="Build NFIQ 2">
+    ```bash
+    cmake ..
+    cmake --build .
+    ```
+  </Step>
+</Steps>
+
+### Universal Binary (Intel + Apple Silicon)
+
+To create a universal binary that runs natively on both Intel and Apple Silicon Macs:
+
+<Steps>
+  <Step title="Install universal dependencies">
+    Use the `+universal` variant for all dependencies:
+    
+    ```bash
+    sudo port install berkeley-db +universal cmake hwloc +universal \
+      jpeg +universal openjpeg +universal libpng +universal \
+      openssl +universal sqlite3 +universal tiff +universal \
+      xz +universal zlib +universal zstd +universal
+    ```
+  </Step>
+  
+  <Step title="Configure for both architectures">
+    ```bash
+    cmake .. -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+    ```
+  </Step>
+  
+  <Step title="Build">
+    ```bash
+    cmake --build .
+    ```
+  </Step>
+  
+  <Step title="Verify universal binary">
+    ```bash
+    lipo -archs NFIQ2/NFIQ2Algorithm/nfiq2
+    # Output: x86_64 arm64
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  **All dependencies must be built universally.** If any dependency is single-architecture, the build will fail with linker errors.
+</Warning>
+
+### Architecture-Specific Builds
+
+<CodeGroup>
+```bash Intel (x86_64) only
+cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
+```
+
+```bash Apple Silicon (arm64) only
+cmake .. -DCMAKE_OSX_ARCHITECTURES=arm64
+```
+
+```bash Universal (both)
+cmake .. -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+```
+</CodeGroup>
+
+### Known Limitations
+
+<Warning>
+  **Xcode 10+ does not support 32-bit applications.** To build NFIQ 2 for 32-bit macOS, you must use Xcode 9.4.x or earlier.
+</Warning>
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="OpenSSL not found">
+    Specify the OpenSSL root directory:
+    
+    ```bash
+    cmake .. -DOPENSSL_ROOT_DIR=/opt/local
+    ```
+  </Accordion>
+  
+  <Accordion title="Dynamic library dependencies in release builds">
+    For distribution, force static dependencies:
+    
+    ```bash
+    cmake .. -DMACOS_FORCE_STATIC=ON
+    ```
+  </Accordion>
+  
+  <Accordion title="Code signing errors">
+    If distributing signed packages:
+    
+    ```bash
+    cmake .. -DMACOS_CODESIGN=ON \
+      -DMACOS_APPLICATION_SIGNING_IDENTITY="Developer ID Application: Your Name" \
+      -DMACOS_INSTALLER_SIGNING_IDENTITY="Developer ID Installer: Your Name"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Linux
+
+### Supported Distributions
+
+NFIQ 2 has been tested on:
+
+- **Ubuntu** 18.04, 20.04, 22.04, 24.04
+- **Debian** 10, 11, 12
+- **RHEL / CentOS / Rocky Linux** 7, 8, 9
+- **Fedora** 36+
+
+### Build Requirements
+
+<Tabs>
+  <Tab title="Ubuntu/Debian">
+    ```bash
+    sudo apt-get update
+    sudo apt-get install build-essential cmake libdb++-dev \
+      libhwloc-dev libjbig-dev libjpeg-dev libopenjp2-7-dev \
+      liblzma-dev libpng-dev libsqlite3-dev libssl-dev \
+      libtiff-dev libzstd-dev zlib1g-dev
+    ```
+  </Tab>
+  
+  <Tab title="RHEL/CentOS/Fedora">
+    ```bash
+    sudo yum install cmake gcc-c++ hwloc-devel jbigkit-devel \
+      libdb-cxx-devel libjpeg-turbo-devel libpng-devel \
+      libsqlite3x-devel libtiff-devel libzstd-devel \
+      openssl-devel openjpeg2-devel xz-devel zlib-devel
+    ```
+  </Tab>
+</Tabs>
+
+### Standard Build
+
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+### Creating Distribution Packages
+
+<Tabs>
+  <Tab title="Debian (.deb)">
+    ```bash
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake --build .
+    cpack -G DEB
+    ```
+    
+    Output:
+    - `nfiq2_{version}-1_{arch}.deb` (CLI)
+    - `nfiq2-dev_{version}-1_{arch}.deb` (development files)
+    
+    Install:
+    ```bash
+    sudo dpkg -i nfiq2_*.deb
+    ```
+  </Tab>
+  
+  <Tab title="Red Hat (.rpm)">
+    ```bash
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake --build .
+    cpack -G RPM
+    ```
+    
+    Output:
+    - `nfiq2-{version}-1.el{ver}.{arch}.rpm` (CLI)
+    - `nfiq2-devel-{version}-1.el{ver}.{arch}.rpm` (development files)
+    
+    Install:
+    ```bash
+    sudo rpm -i nfiq2-*.rpm
+    ```
+  </Tab>
+</Tabs>
+
+### Architecture
+
+Architecture is typically auto-detected. For explicit control:
+
+<CodeGroup>
+```bash 32-bit
+cmake .. -DCMAKE_C_FLAGS="-m32" -DCMAKE_CXX_FLAGS="-m32"
+```
+
+```bash 64-bit (default)
+cmake ..
+```
+</CodeGroup>
+
+---
+
+## Android
+
+NFIQ 2 supports Android NDK builds for ARM and x86 architectures.
+
+### Build Requirements
+
+- **Android NDK** (r21e or later recommended)
+- **CMake 3.10+**
+
+### Using Android Toolchain
+
+<Steps>
+  <Step title="Set NDK environment variable">
+    ```bash
+    export ANDROID_NDK=/path/to/android-ndk
+    ```
+  </Step>
+  
+  <Step title="Configure for Android">
+    ```bash
+    cmake .. \
+      -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+      -DANDROID_ABI=arm64-v8a \
+      -DANDROID_PLATFORM=android-21 \
+      -DBUILD_NFIQ2_CLI=OFF
+    ```
+  </Step>
+  
+  <Step title="Build">
+    ```bash
+    cmake --build .
+    ```
+  </Step>
+</Steps>
+
+### Supported ABIs
+
+<CodeGroup>
+```bash ARM 64-bit (recommended)
+-DANDROID_ABI=arm64-v8a
+```
+
+```bash ARM 32-bit
+-DANDROID_ABI=armeabi-v7a
+```
+
+```bash x86 64-bit (emulator)
+-DANDROID_ABI=x86_64
+```
+
+```bash x86 32-bit (emulator)
+-DANDROID_ABI=x86
+```
+</CodeGroup>
+
+### Minimum API Level
+
+NFIQ 2 supports Android API level 21 (Android 5.0 Lollipop) and later:
+
+```bash
+-DANDROID_PLATFORM=android-21
+```
+
+<Note>
+  The CLI is typically not built for Android. Use `-DBUILD_NFIQ2_CLI=OFF` for library-only builds.
+</Note>
+
+---
+
+## iOS
+
+NFIQ 2 supports iOS builds for both physical devices and simulators.
+
+### Build Requirements
+
+- **Xcode 10+**
+- **CMake 3.14+**
+- **iOS Deployment Target:** iOS 12.0+
+
+### Using iOS Toolchain
+
+<Steps>
+  <Step title="Download iOS CMake toolchain">
+    The repository includes `cmake/ios.toolchain.cmake`
+  </Step>
+  
+  <Step title="Configure for iOS device">
+    ```bash
+    cmake .. \
+      -DCMAKE_TOOLCHAIN_FILE=../cmake/ios.toolchain.cmake \
+      -DPLATFORM=OS64 \
+      -DBUILD_NFIQ2_CLI=OFF
+    ```
+  </Step>
+  
+  <Step title="Build">
+    ```bash
+    cmake --build .
+    ```
+  </Step>
+</Steps>
+
+### Platform Options
+
+<CodeGroup>
+```bash iOS Device (arm64)
+-DPLATFORM=OS64
+```
+
+```bash iOS Simulator (x86_64)
+-DPLATFORM=SIMULATOR64
+```
+
+```bash iOS Simulator (arm64, M1+ Macs)
+-DPLATFORM=SIMULATORARM64
+```
+
+```bash Universal iOS (device + simulator)
+-DPLATFORM=OS64COMBINED
+```
+</CodeGroup>
+
+### Bitcode
+
+To enable bitcode for App Store submission:
+
+```bash
+cmake .. \
+  -DCMAKE_TOOLCHAIN_FILE=../cmake/ios.toolchain.cmake \
+  -DPLATFORM=OS64 \
+  -DENABLE_BITCODE=ON
+```
+
+<Note>
+  The CLI is not supported on iOS. Always use `-DBUILD_NFIQ2_CLI=OFF` for iOS builds.
+</Note>
+
+---
+
+## Cross-Compilation
+
+For cross-compiling to other platforms, specify a CMake toolchain file:
+
+```bash
+cmake .. -DCMAKE_TOOLCHAIN_FILE=/path/to/toolchain.cmake
+```
+
+Refer to the [CMake documentation](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html) for creating custom toolchain files.
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Library Build" icon="book" href="/building/library">
+    Build the NFIQ 2 library only
+  </Card>
+  
+  <Card title="CLI Build" icon="terminal" href="/building/cli">
+    Build with command-line interface
+  </Card>
+</CardGroup>

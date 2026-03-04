@@ -1,0 +1,334 @@
+---
+title: FJFX Minutiae Quality
+description: Reference for the FingerJetFX Minutiae Quality module
+---
+
+The **FJFX Minutiae Quality** module evaluates the quality of detected minutiae points using the **FingerJetFX** minutiae extraction algorithm. It computes quality metrics based on local image characteristics at minutiae locations, including contrast (Mu) and orientation certainty (OCL).
+
+## Overview
+
+Minutiae quality assessment is critical for fingerprint matching accuracy. This module analyzes the local image quality surrounding each detected minutia point to determine its reliability. High-quality minutiae are more likely to be consistently detected and matched correctly.
+
+<Info>
+The module integrates with the FingerJetFX feature extraction library and computes quality measures based on both contrast characteristics and orientation certainty at minutiae positions.
+</Info>
+
+## Class Definition
+
+**Header:** `quality_modules/FJFXMinutiaeQuality.h`
+
+```cpp
+class FJFXMinutiaeQuality : public Algorithm {
+public:
+    struct MinutiaData {
+        int x;          ///< x-coordinate from top-left corner
+        int y;          ///< y-coordinate from top-left corner
+        double quality; ///< computed minutiae quality value
+    };
+    
+    FJFXMinutiaeQuality(
+        const NFIQ2::FingerprintImageData &fingerprintImage,
+        const std::vector<FingerJetFX::Minutia> &minutiaData);
+    
+    virtual ~FJFXMinutiaeQuality();
+    
+    std::string getName() const override;
+    static std::vector<std::string> getNativeQualityMeasureIDs();
+    std::vector<FingerJetFX::Minutia> getMinutiaData() const;
+
+private:
+    std::unordered_map<std::string, double> computeFeatureData(
+        const NFIQ2::FingerprintImageData &fingerprintImage);
+    
+    std::vector<FingerJetFX::Minutia> minutiaData_ {};
+    
+    std::vector<MinutiaData> computeMuMinQuality(
+        int bs, const NFIQ2::FingerprintImageData &fingerprintImage);
+    
+    std::vector<MinutiaData> computeOCLMinQuality(
+        int bs, const NFIQ2::FingerprintImageData &fingerprintImage);
+    
+    double computeMMBBasedOnCOM(
+        int bs,
+        const NFIQ2::FingerprintImageData &fingerprintImage,
+        unsigned int regionSize);
+};
+```
+
+**Ideal Quality Constants:**
+```cpp
+#define IDEALSTDEV 64   // Ideal standard deviation for local regions
+#define IDEALMEAN 127   // Ideal mean intensity for local regions
+```
+
+## Constructor
+
+### FJFXMinutiaeQuality()
+
+```cpp
+FJFXMinutiaeQuality(
+    const NFIQ2::FingerprintImageData &fingerprintImage,
+    const std::vector<FingerJetFX::Minutia> &minutiaData)
+```
+
+Creates a FJFX Minutiae Quality module instance with pre-detected minutiae.
+
+**Parameters:**
+- `fingerprintImage` - Input fingerprint image data
+- `minutiaData` - Vector of detected minutiae from FingerJetFX
+
+## Methods
+
+### getName()
+
+```cpp
+std::string getName() const override
+```
+
+Returns the module identifier: `"MinutiaeQuality"`
+
+**Returns:** Module name as string
+
+### getNativeQualityMeasureIDs()
+
+```cpp
+static std::vector<std::string> getNativeQualityMeasureIDs()
+```
+
+Returns the list of quality measure identifiers produced by this module.
+
+**Returns:** Vector containing:
+- `FJFXPos_Mu_MinutiaeQuality_2` - Percent of minutiae with moderate contrast quality
+- `FJFXPos_OCL_MinutiaeQuality_80` - Percent of minutiae with high orientation certainty
+
+### getMinutiaData()
+
+```cpp
+std::vector<FingerJetFX::Minutia> getMinutiaData() const
+```
+
+Returns the minutiae data used for quality computation.
+
+**Returns:** Vector of FingerJetFX minutiae
+
+**Throws:**
+- `NFIQ2::Exception` - If template could not be extracted
+
+## Quality Features
+
+The FJFX Minutiae Quality module generates 2 quality measures:
+
+### FJFXPos_Mu_MinutiaeQuality_2
+
+**Description:** Percentage of minutiae with contrast quality in the moderate-high range.
+
+**Algorithm:**
+1. For each minutia, extract the local region around its position
+2. Compute contrast-based quality metric (difference from ideal mean/stddev)
+3. Classify quality into 4 ranges:
+   - Range 0: quality ≤ -0.5 (very poor)
+   - Range 1: -0.5 < quality ≤ 0.0 (poor)
+   - Range 2: 0.0 < quality ≤ 0.5 (moderate-good)
+   - Range 3: quality > 0.5 (excellent)
+4. Return the percentage of minutiae in range 2
+
+**Interpretation:**
+- **High values (> 0.5):** Most minutiae are in well-contrasted regions
+- **Low values (< 0.2):** Many minutiae are in poor contrast areas
+
+### FJFXPos_OCL_MinutiaeQuality_80
+
+**Description:** Percentage of minutiae with orientation certainty level above 80%.
+
+**Algorithm:**
+1. For each minutia, extract the local block at its position
+2. Compute OCL (Orientation Certainty Level) for that block
+3. Convert OCL to percentage scale (0-100)
+4. Count minutiae with OCL > 80
+5. Return as percentage of total minutiae
+
+**Interpretation:**
+- **High values (> 0.6):** Most minutiae are in regions with clear ridge orientation
+- **Low values (< 0.3):** Many minutiae are in uncertain orientation areas
+
+<Note>
+Both quality measures range from 0.0 to 1.0 (representing 0% to 100%). Higher values indicate better overall minutiae quality.
+</Note>
+
+## Supporting Data Structures
+
+### MinutiaData
+
+```cpp
+struct MinutiaData {
+    int x;          ///< x-coordinate from top-left corner
+    int y;          ///< y-coordinate from top-left corner  
+    double quality; ///< computed minutiae quality value
+};
+```
+
+Internal structure for storing minutia position and its computed quality score.
+
+## Private Methods
+
+### computeMuMinQuality()
+
+```cpp
+std::vector<MinutiaData> computeMuMinQuality(
+    int bs,
+    const NFIQ2::FingerprintImageData &fingerprintImage)
+```
+
+Computes contrast-based quality for each minutia.
+
+**Parameters:**
+- `bs` - Block size for local region analysis
+- `fingerprintImage` - Input fingerprint image
+
+**Returns:** Vector of MinutiaData with quality scores based on contrast
+
+### computeOCLMinQuality()
+
+```cpp
+std::vector<MinutiaData> computeOCLMinQuality(
+    int bs,
+    const NFIQ2::FingerprintImageData &fingerprintImage)
+```
+
+Computes orientation certainty-based quality for each minutia.
+
+**Parameters:**
+- `bs` - Block size for local region analysis  
+- `fingerprintImage` - Input fingerprint image
+
+**Returns:** Vector of MinutiaData with quality scores based on OCL
+
+### computeMMBBasedOnCOM()
+
+```cpp
+double computeMMBBasedOnCOM(
+    int bs,
+    const NFIQ2::FingerprintImageData &fingerprintImage,
+    unsigned int regionSize)
+```
+
+Computes Mean of Block Means based on the center of mass (COM) of minutiae distribution.
+
+**Parameters:**
+- `bs` - Block size
+- `fingerprintImage` - Input fingerprint image
+- `regionSize` - Size of region around COM
+
+**Returns:** MMB value for the central minutiae region
+
+## Usage Example
+
+```cpp
+#include <quality_modules/FJFXMinutiaeQuality.h>
+#include <quality_modules/FingerJetFX.h>
+
+NFIQ2::FingerprintImageData fpImage = /* load image */;
+
+try {
+    // First, extract minutiae using FingerJetFX
+    std::vector<NFIQ2::QualityMeasures::FingerJetFX::Minutia> minutiae;
+    // ... extract minutiae ...
+    
+    // Compute minutiae quality
+    NFIQ2::QualityMeasures::FJFXMinutiaeQuality fjfxQuality(fpImage, minutiae);
+    
+    // Get quality features
+    auto features = fjfxQuality.getFeatures();
+    double muQuality = features["FJFXPos_Mu_MinutiaeQuality_2"];
+    double oclQuality = features["FJFXPos_OCL_MinutiaeQuality_80"];
+    
+    // Assess overall minutiae quality
+    if (muQuality < 0.3 || oclQuality < 0.4) {
+        // Poor minutiae quality - many minutiae in low-quality regions
+    }
+    
+    // Get individual minutiae data
+    auto minutiaeData = fjfxQuality.getMinutiaData();
+    std::cout << "Total minutiae detected: " << minutiaeData.size() << std::endl;
+    
+} catch (const NFIQ2::Exception &e) {
+    // Handle error
+}
+```
+
+## Integration Example
+
+```cpp
+// Complete workflow with minutiae extraction and quality assessment
+
+#include <quality_modules/FingerJetFX.h>
+#include <quality_modules/FJFXMinutiaeQuality.h>
+
+NFIQ2::FingerprintImageData fpImage = /* load image */;
+
+try {
+    // Step 1: Extract minutiae
+    NFIQ2::QualityMeasures::FingerJetFX fjfx(fpImage);
+    std::vector<NFIQ2::QualityMeasures::FingerJetFX::Minutia> minutiae = 
+        fjfx.getMinutiae();
+    
+    if (minutiae.empty()) {
+        throw NFIQ2::Exception(
+            NFIQ2::ErrorCode::NoMinutiaeDetected,
+            "No minutiae detected in fingerprint");
+    }
+    
+    // Step 2: Assess minutiae quality
+    NFIQ2::QualityMeasures::FJFXMinutiaeQuality quality(fpImage, minutiae);
+    auto features = quality.getFeatures();
+    
+    // Step 3: Filter minutiae based on quality thresholds
+    double muQualityThreshold = 0.3;
+    double oclQualityThreshold = 0.5;
+    
+    if (features["FJFXPos_Mu_MinutiaeQuality_2"] >= muQualityThreshold &&
+        features["FJFXPos_OCL_MinutiaeQuality_80"] >= oclQualityThreshold) {
+        // Sufficient high-quality minutiae for reliable matching
+    } else {
+        // Quality issues detected
+    }
+    
+} catch (const NFIQ2::Exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+}
+```
+
+## Algorithm Details
+
+### Contrast Quality (Mu) Assessment
+
+1. **Local region extraction:** For each minutia at position (x, y), extract a block of size `bs × bs`
+2. **Compute local statistics:**
+   - Local mean intensity
+   - Local standard deviation
+3. **Compare to ideal values:**
+   - Ideal mean: 127 (balanced ridge/valley)
+   - Ideal standard deviation: 64 (good contrast)
+4. **Quality score:** Based on deviation from ideal values
+
+### Orientation Certainty (OCL) Assessment
+
+1. **Block extraction:** Extract block at minutia position
+2. **OCL computation:** Use OCLHistogram::getOCLValueOfBlock()
+3. **Threshold application:** Check if OCL > 0.80
+4. **Aggregation:** Count percentage exceeding threshold
+
+## Relationship to NFIQ 2.0
+
+The FJFX Minutiae Quality features are integrated into the overall NFIQ 2.0 score:
+
+- **Minutiae count and quality** are strong predictors of matching performance
+- **Spatial distribution** affects the discriminative power of the fingerprint
+- **Local quality at minutiae** impacts feature extraction reliability
+
+## Related Modules
+
+- [FingerJetFX](/api/modules/fingerjetfx) - Minutiae extraction engine
+- [OCL Histogram](/api/modules/ocl-histogram) - Orientation certainty computation
+- [Mu](/api/modules/mu) - Contrast measurement
+- [Quality Module Base](/api/modules/module) - Base class for all quality modules

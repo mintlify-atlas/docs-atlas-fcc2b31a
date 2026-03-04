@@ -1,0 +1,648 @@
+---
+title: 'Random Forest Model'
+description: 'Understanding the NFIQ2 machine learning model, training data, model parameters, FCT codes, and embedding options'
+icon: 'brain'
+---
+
+## Overview
+
+NFIQ2 uses a **random forest classifier** to combine native quality measures into unified quality scores. The random forest is a machine learning model trained on thousands of fingerprint images with known recognition performance outcomes.
+
+<Info>
+The random forest model is the core of NFIQ2's ability to predict recognition performance. It learns complex relationships between quality measures and match accuracy that would be difficult to encode manually.
+</Info>
+
+## Random Forest Fundamentals
+
+### What is a Random Forest?
+
+A random forest is an ensemble learning method that:
+
+1. **Trains multiple decision trees** on different subsets of training data
+2. **Combines tree predictions** through averaging or voting
+3. **Reduces overfitting** by using randomized tree construction
+4. **Handles high-dimensional features** effectively
+
+### Why Random Forest for Quality Assessment?
+
+Random forests are ideal for NFIQ2 because they:
+
+- Handle **non-linear relationships** between quality measures
+- Account for **feature interactions** automatically
+- Provide **robust predictions** even with correlated features
+- Train efficiently on large datasets
+- Generate **interpretable** feature importance rankings
+
+<Tip>
+Unlike neural networks, random forests don't require extensive hyperparameter tuning and provide good performance out-of-the-box.
+</Tip>
+
+## Model Architecture
+
+### Core Components
+
+The NFIQ2 random forest implementation consists of:
+
+```cpp
+namespace NFIQ2::Prediction {
+    /**
+     * Random Forest Machine Learning model for generating
+     * unified quality scores.
+     */
+    class RandomForestML {
+    public:
+        RandomForestML();
+        
+        // Initialize from external parameters file
+        std::string initModule(
+            const std::string &fileName,
+            const std::string &fileHash
+        );
+        
+        // Evaluate quality score from features
+        void evaluate(
+            const std::unordered_map<std::string, double> &features,
+            double &qualityValue
+        ) const;
+        
+    private:
+        // OpenCV RTrees model
+        cv::Ptr<cv::ml::RTrees> m_pTrainedRF;
+    };
+}
+```
+
+### OpenCV RTrees Integration
+
+NFIQ2 uses **OpenCV's RTrees** (Random Trees) implementation:
+
+```cpp
+// Internal model representation
+cv::Ptr<cv::ml::RTrees> m_pTrainedRF;
+```
+
+**Benefits**:
+- Mature, well-tested implementation
+- Fast prediction performance
+- Cross-platform compatibility
+- Serialization support
+
+## Model Parameters
+
+### Parameter File Format
+
+NFIQ2 random forest parameters are stored in YAML format. The default model is:
+
+```
+Name = Plain TIR + Ink
+Trainer = National Institute of Standards and Technology
+Description = Trained on plain optical bright-field total internal reflection and scanned ink plain impression fingerprints, as described in the NFIQ 2 report. This model can only be used with NFIQ 2 v2.3.
+Version = 2.0.0
+Path = nist_plain_tir-ink.yaml
+Hash = b4a1e7586b3be906f9770e4b77768038
+```
+
+### Loading Model Parameters
+
+<Tabs>
+  <Tab title="From File">
+    ```cpp
+    #include <nfiq2.hpp>
+    
+    // Load model from file with hash verification
+    std::string modelPath = "/path/to/nist_plain_tir-ink.yaml";
+    std::string modelHash = "b4a1e7586b3be906f9770e4b77768038";
+    
+    NFIQ2::Algorithm algorithm(modelPath, modelHash);
+    
+    // Verify model is loaded
+    if (algorithm.isInitialized()) {
+        std::cout << "Model loaded successfully" << std::endl;
+        std::cout << "Hash: " << algorithm.getParameterHash() << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Using ModelInfo">
+    ```cpp
+    #include <nfiq2.hpp>
+    
+    // Create ModelInfo from model info file
+    NFIQ2::ModelInfo modelInfo("/path/to/model_info.txt");
+    
+    // Get model metadata
+    std::cout << "Model Name: " << modelInfo.getModelName() << std::endl;
+    std::cout << "Trainer: " << modelInfo.getModelTrainer() << std::endl;
+    std::cout << "Description: " << modelInfo.getModelDescription() << std::endl;
+    std::cout << "Version: " << modelInfo.getModelVersion() << std::endl;
+    
+    // Initialize algorithm with ModelInfo
+    NFIQ2::Algorithm algorithm(modelInfo);
+    ```
+  </Tab>
+  
+  <Tab title="Default Constructor">
+    ```cpp
+    #include <nfiq2.hpp>
+    
+    // Use default constructor
+    // May load embedded parameters or default model
+    NFIQ2::Algorithm algorithm;
+    
+    // Check if embedded
+    if (algorithm.isEmbedded()) {
+        std::cout << "Using embedded parameters" << std::endl;
+        
+        try {
+            unsigned int fct = algorithm.getEmbeddedFCT();
+            std::cout << "FCT Code: " << fct << std::endl;
+        } catch (const NFIQ2::Exception& e) {
+            std::cout << "FCT not specified" << std::endl;
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Model Information API
+
+```cpp
+namespace NFIQ2 {
+    /** Information about a random forest parameter model. */
+    class ModelInfo {
+    public:
+        ModelInfo(const std::string &modelInfoFilePath);
+        
+        std::string getModelName() const;
+        std::string getModelTrainer() const;
+        std::string getModelDescription() const;
+        std::string getModelVersion() const;
+        std::string getModelPath() const;
+        std::string getModelHash() const;
+        
+        // Model info file keys
+        static const char ModelInfoKeyName[];
+        static const char ModelInfoKeyTrainer[];
+        static const char ModelInfoKeyDescription[];
+        static const char ModelInfoKeyVersion[];
+        static const char ModelInfoKeyPath[];
+        static const char ModelInfoKeyHash[];
+    };
+}
+```
+
+## Training Data
+
+### Dataset Characteristics
+
+The NIST Plain TIR + Ink model is trained on:
+
+<AccordionGroup>
+  <Accordion title="Image Types">
+    **Plain Impression Fingerprints**:
+    - Optical bright-field total internal reflection (TIR) captures
+    - Scanned ink impressions
+    - Both live-scan and offline captured
+    
+    **Not Included**:
+    - Rolled impressions
+    - Contactless captures
+    - Mobile sensor captures
+    - Latent prints
+  </Accordion>
+  
+  <Accordion title="Technical Specifications">
+    - **Resolution**: 500 PPI
+    - **Bit depth**: 8-bit grayscale
+    - **Format**: Decompressed raw pixel data
+    - **Encoding**: ISO/IEC 39794-4:2019 canonical format
+  </Accordion>
+  
+  <Accordion title="Quality Distribution">
+    Training set includes:
+    - High-quality captures (excellent ridge detail)
+    - Medium-quality captures (typical operational quality)
+    - Low-quality captures (marginal but usable)
+    - Failed captures (for quality threshold calibration)
+    
+    Balanced to reflect operational distributions.
+  </Accordion>
+  
+  <Accordion title="Performance Ground Truth">
+    Quality labels derived from:
+    - Genuine match scores (same finger comparisons)
+    - Impostor match scores (different finger comparisons)
+    - Recognition performance metrics (FMR, FNMR)
+    - Multi-system matching results
+  </Accordion>
+</AccordionGroup>
+
+### Training Methodology
+
+The model training process:
+
+1. **Feature Extraction**: Compute all native quality measures for training images
+2. **Ground Truth Assignment**: Link images to recognition performance outcomes
+3. **Forest Training**: Train random forest to predict performance from measures
+4. **Validation**: Test on held-out data to prevent overfitting
+5. **Calibration**: Map predictions to 0-100 quality score scale
+
+<Note>
+The current model (v2.3) uses updated training methodology and expanded training data compared to earlier versions, resulting in improved prediction accuracy.
+</Note>
+
+## Friction Ridge Capture Technology (FCT) Codes
+
+### What are FCT Codes?
+
+**Friction Ridge Capture Technology (FCT)** codes specify the sensor type used for fingerprint capture, as defined in **ANSI/NIST-ITL 1-2011: Update 2015**.
+
+### Common FCT Codes
+
+| FCT Code | Technology | Description |
+|----------|-----------|-------------|
+| 0 | Unspecified | Default/unknown capture method |
+| 2 | Optical TIR (bright) | Total internal reflection, bright field |
+| 3 | Optical direct view | Direct optical imaging |
+| 8 | Thermal | Heat-sensing |
+| 9 | Capacitive | Electric field sensing |
+| 14 | Electro-luminescent | Light-emitting polymer |
+
+<Info>
+The NIST Plain TIR + Ink model is primarily trained on **FCT 0** (unspecified, includes ink) and **FCT 2** (optical TIR) captures.
+</Info>
+
+### FCT in NFIQ2
+
+```cpp
+namespace NFIQ2 {
+    class Algorithm {
+    public:
+        /**
+         * Obtain the friction ridge capture technology (FCT) specified
+         * for the embedded random forest parameters.
+         *
+         * @return Embedded FCT specified.
+         * @throw NFIQ2::Exception Parameters were not embedded or FCT was not specified.
+         */
+        unsigned int getEmbeddedFCT() const;
+    };
+}
+```
+
+### Using FCT Information
+
+```cpp
+// Check embedded FCT
+NFIQ2::Algorithm algorithm;
+
+if (algorithm.isEmbedded()) {
+    try {
+        unsigned int fct = algorithm.getEmbeddedFCT();
+        
+        switch (fct) {
+            case 0:
+                std::cout << "Model: Unspecified/Ink" << std::endl;
+                break;
+            case 2:
+                std::cout << "Model: Optical TIR (bright field)" << std::endl;
+                break;
+            default:
+                std::cout << "Model FCT: " << fct << std::endl;
+        }
+    } catch (const NFIQ2::Exception& e) {
+        std::cout << "FCT not specified in embedded model" << std::endl;
+    }
+}
+```
+
+<Warning>
+Using a model with the wrong FCT code may result in less accurate quality predictions. Always use a model trained on your sensor type when possible.
+</Warning>
+
+## Embedding Model Parameters
+
+### Why Embed Parameters?
+
+Embedding random forest parameters in the library offers several advantages:
+
+- **Simplified deployment**: No external parameter files to distribute
+- **Reduced I/O**: Faster initialization (no file loading)
+- **Security**: Parameters cannot be modified or replaced
+- **Reliability**: Eliminates missing file errors
+
+### Build-Time Embedding
+
+Parameters are embedded during compilation:
+
+```cmake
+# CMakeLists.txt configuration
+option(EMBED_RANDOM_FOREST_PARAMETERS "Embed random forest parameters in library" OFF)
+
+set(EMBEDDED_RANDOM_FOREST_PARAMETER_FCT "0" CACHE STRING
+    "ANSI/NIST-ITL 1-2011: Update 2015 friction ridge capture technology (FRCT) code for parameters to embed")
+
+if(EMBED_RANDOM_FOREST_PARAMETERS)
+    message(STATUS "Embedding random forest parameters")
+    add_definitions(-DNFIQ2_EMBED_RANDOM_FOREST_PARAMETERS)
+    add_definitions(-DEMBEDDED_RANDOM_FOREST_PARAMETER_FCT=${EMBEDDED_RANDOM_FOREST_PARAMETER_FCT})
+endif()
+```
+
+### Building with Embedded Parameters
+
+<Tabs>
+  <Tab title="CMake Configuration">
+    ```bash
+    # Configure with embedded parameters
+    cmake -B build \
+      -DEMBED_RANDOM_FOREST_PARAMETERS=ON \
+      -DEMBEDDED_RANDOM_FOREST_PARAMETER_FCT=2 \
+      ..
+    
+    # Build
+    cmake --build build
+    ```
+  </Tab>
+  
+  <Tab title="Runtime Detection">
+    ```cpp
+    NFIQ2::Algorithm algorithm;
+    
+    if (algorithm.isEmbedded()) {
+        std::cout << "Using embedded parameters" << std::endl;
+        
+        // FCT is optional metadata
+        try {
+            unsigned int fct = algorithm.getEmbeddedFCT();
+            std::cout << "FCT Code: " << fct << std::endl;
+        } catch (const NFIQ2::Exception& e) {
+            std::cout << "FCT not specified (using default)" << std::endl;
+        }
+    } else {
+        std::cout << "Using external parameter file" << std::endl;
+        std::cout << "Hash: " << algorithm.getParameterHash() << std::endl;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Conditional Compilation">
+    ```cpp
+    // Check if parameters are embedded at compile time
+    #ifdef NFIQ2_EMBED_RANDOM_FOREST_PARAMETERS
+        std::cout << "Built with embedded parameters" << std::endl;
+        
+        #ifdef EMBEDDED_RANDOM_FOREST_PARAMETER_FCT
+            std::cout << "Embedded FCT: " 
+                      << EMBEDDED_RANDOM_FOREST_PARAMETER_FCT << std::endl;
+        #endif
+    #else
+        std::cout << "Built for external parameter files" << std::endl;
+    #endif
+    ```
+  </Tab>
+</Tabs>
+
+### Embedded vs. External Parameters
+
+<Tabs>
+  <Tab title="Embedded Parameters">
+    **Advantages**:
+    - No runtime file I/O
+    - Faster initialization
+    - Simpler deployment
+    - Cannot be tampered with
+    
+    **Disadvantages**:
+    - Increases library size
+    - Requires recompilation to change models
+    - Single model per build
+    - Limited flexibility
+    
+    **Best For**:
+    - Production deployments
+    - Embedded systems
+    - Containerized applications
+    - Security-sensitive environments
+  </Tab>
+  
+  <Tab title="External Parameters">
+    **Advantages**:
+    - Smaller library size
+    - Swap models without recompiling
+    - Multiple models available
+    - Model versioning flexibility
+    
+    **Disadvantages**:
+    - File management required
+    - Slower initialization (I/O)
+    - File corruption possible
+    - Deployment complexity
+    
+    **Best For**:
+    - Development and testing
+    - Research applications
+    - Multi-model scenarios
+    - Frequent model updates
+  </Tab>
+</Tabs>
+
+## Model Evaluation
+
+### Computing Quality Scores
+
+The random forest evaluates features to produce quality scores:
+
+```cpp
+namespace NFIQ2::Prediction {
+    class RandomForestML {
+    public:
+        /**
+         * Compute NFIQ2 quality score based on model and provided features.
+         *
+         * @param features Map of quality measure identifiers to values
+         * @param qualityValue Output quality score
+         */
+        void evaluate(
+            const std::unordered_map<std::string, double> &features,
+            double &qualityValue
+        ) const;
+    };
+}
+```
+
+### Internal Prediction Flow
+
+1. **Feature Vector Construction**: Maps quality measure names to model input indices
+2. **Tree Evaluation**: Each decision tree produces a prediction
+3. **Ensemble Aggregation**: Tree predictions are averaged
+4. **Score Normalization**: Raw prediction mapped to [0, 100] scale
+
+### Algorithm Integration
+
+The `NFIQ2::Algorithm` class wraps the random forest:
+
+```cpp
+namespace NFIQ2 {
+    class Algorithm {
+    public:
+        // Compute quality score from image
+        unsigned int computeUnifiedQualityScore(
+            const NFIQ2::FingerprintImageData &rawImage
+        ) const;
+        
+        // Compute quality score from pre-computed algorithms
+        unsigned int computeUnifiedQualityScore(
+            const std::vector<std::shared_ptr<QualityMeasures::Algorithm>> &algorithms
+        ) const;
+        
+        // Compute quality score from feature map
+        unsigned int computeUnifiedQualityScore(
+            const std::unordered_map<std::string, double> &features
+        ) const;
+    };
+}
+```
+
+## Model Versioning
+
+### Version History
+
+NFIQ2 has released several model versions:
+
+```cpp
+namespace NFIQ2::Identifiers {
+    namespace UnifiedQualityScores {
+        extern const char NFIQ2Rev0[];  // v2.0 - Initial release
+        extern const char NFIQ2Rev1[];  // v2.1 - Refined training
+        extern const char NFIQ2Rev2[];  // v2.2 - Expanded dataset
+        extern const char NFIQ2Rev3[];  // v2.3 - Current version
+    }
+    
+    namespace CBEFF {
+        extern const unsigned int NFIQ2Rev0;  // CBEFF ID for v2.0
+        extern const unsigned int NFIQ2Rev1;  // CBEFF ID for v2.1
+        extern const unsigned int NFIQ2Rev2;  // CBEFF ID for v2.2
+        extern const unsigned int NFIQ2Rev3;  // CBEFF ID for v2.3
+    }
+}
+```
+
+### Version Compatibility
+
+<Warning>
+**Important**: Quality scores from different NFIQ2 versions are not directly comparable. Always document which version you're using.
+</Warning>
+
+### Checking Model Version
+
+```cpp
+// Get model version from ModelInfo
+NFIQ2::ModelInfo modelInfo("/path/to/model_info.txt");
+std::string version = modelInfo.getModelVersion();
+
+std::cout << "Model Version: " << version << std::endl;
+
+// Get model hash for verification
+std::string hash = modelInfo.getModelHash();
+std::cout << "Model Hash: " << hash << std::endl;
+```
+
+## Training Custom Models
+
+### When to Train Custom Models
+
+Consider training a custom model if:
+
+- Your sensor type differs significantly from optical TIR
+- Your population has unique characteristics
+- You need quality predictions for specific use cases
+- You have ground-truth performance data from your system
+
+<Note>
+Custom model training is an advanced topic. Contact NIST or consult the NFIQ2 technical report for guidance on training methodology.
+</Note>
+
+### Training Data Requirements
+
+- **Minimum**: 1,000+ fingerprint images with ground truth
+- **Recommended**: 5,000+ images with diverse quality distribution
+- **Ground Truth**: Match performance data from operational system
+- **Validation Set**: 20-30% held out for testing
+
+### Model Export Format
+
+Custom models must be:
+- Trained using OpenCV RTrees
+- Exported to YAML format
+- Compatible with NFIQ2 feature naming conventions
+- Validated against standard test set
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Verify Model Hash">
+    Always verify model parameter hash on loading:
+    
+    ```cpp
+    try {
+        NFIQ2::Algorithm algorithm(modelPath, expectedHash);
+        std::string loadedHash = algorithm.getParameterHash();
+        
+        if (loadedHash != expectedHash) {
+            std::cerr << "Hash mismatch!" << std::endl;
+        }
+    } catch (const NFIQ2::Exception& e) {
+        std::cerr << "Model load failed: " << e.what() << std::endl;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Cache Algorithm Instances">
+    Model initialization is expensive. Reuse `Algorithm` instances:
+    
+    ```cpp
+    // Initialize once
+    static NFIQ2::Algorithm algorithm;
+    
+    // Reuse for all quality score computations
+    for (const auto& image : images) {
+        unsigned int score = algorithm.computeUnifiedQualityScore(image);
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Document Model Version">
+    Always record which model version produced quality scores:
+    
+    - Store model hash with quality scores in database
+    - Include model version in log files
+    - Document model changes in release notes
+    - Maintain model file version control
+  </Accordion>
+  
+  <Accordion title="Match Model to Sensor">
+    Use models trained on your sensor type:
+    
+    - Check FCT code compatibility
+    - Validate against your sensor's images
+    - Consider training custom model if default performance is poor
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quality Scores" icon="chart-line" href="/concepts/quality-scores">
+    Understand unified quality score interpretation
+  </Card>
+  <Card title="Quality Measures" icon="microscope" href="/concepts/quality-measures">
+    Learn about input features to the model
+  </Card>
+  <Card title="Algorithm API" icon="code" href="/api/algorithm">
+    Complete Algorithm class documentation
+  </Card>
+  <Card title="ModelInfo API" icon="file" href="/api/model-info">
+    Model information management
+  </Card>
+</CardGroup>

@@ -1,0 +1,198 @@
+---
+title: Build Requirements
+description: Dependencies and prerequisites for building NFIQ 2 from source
+---
+
+<Warning>
+  Unless you are **actively developing** code for NFIQ 2, we highly suggest you download pre-built binaries from [GitHub Releases](https://github.com/usnistgov/NFIQ2/releases) instead of attempting to compile.
+</Warning>
+
+## Source Code
+
+You must **recursively** clone the repository to retrieve git submodules. Do **not** use the GitHub ZIP file download.
+
+```bash
+git clone --recursive https://github.com/usnistgov/NFIQ2.git
+cd NFIQ2
+```
+
+If you've already cloned the repository without the `--recursive` flag, initialize submodules with:
+
+```bash
+git submodule update --init --recursive
+```
+
+## Core Dependencies
+
+The NFIQ 2 library requires the following dependencies, included as git submodules:
+
+<CardGroup cols={3}>
+  <Card title="OpenCV" icon="opencv">
+    Computer vision library for image processing
+    
+    **License:** Apache 2.0
+    
+    **Version:** OpenCV 4 (latest release)
+  </Card>
+  
+  <Card title="FingerJetFX OSE" icon="fingerprint">
+    Minutiae extraction engine
+    
+    **License:** LGPLv3
+    
+    **Repository:** [FingerJetFXOSE](https://github.com/FingerJetFXOSE/FingerJetFXOSE)
+  </Card>
+  
+  <Card title="digestpp" icon="hash">
+    C++ header-only message digest library
+    
+    **License:** Public Domain
+    
+    **Repository:** [kerukuro/digestpp](https://github.com/kerukuro/digestpp)
+  </Card>
+</CardGroup>
+
+<Warning>
+  **Using a different version of OpenCV may result in unstable NFIQ 2 scores and is not supported.** NIST relies on the latest release of OpenCV 4 for consistency and accuracy.
+</Warning>
+
+## CLI-Specific Dependencies
+
+If building the standalone command-line executable, additional dependencies are required:
+
+### libbiomeval
+
+The [Biometric Evaluation Framework](https://github.com/usnistgov/libbiomeval) handles fingerprint image I/O and encoding.
+
+- **License:** Public Domain
+- **Additional dependencies required** (see below)
+
+### NFIR
+
+The [NIST Fingerprint Image Resampler](https://github.com/usnistgov/nfir) provides image resampling capabilities.
+
+- **License:** Public Domain
+- **Requires:** OpenCV (already required by NFIQ 2)
+
+## System Packages
+
+The `libbiomeval` dependency requires system-level packages to be installed:
+
+<Tabs>
+  <Tab title="Ubuntu/Debian">
+    ```bash
+    sudo apt-get install \
+      build-essential \
+      cmake \
+      libdb++-dev \
+      libhwloc-dev \
+      libjbig-dev \
+      libjpeg-dev \
+      libopenjp2-7-dev \
+      liblzma-dev \
+      libpng-dev \
+      libsqlite3-dev \
+      libssl-dev \
+      libtiff-dev \
+      libzstd-dev \
+      zlib1g-dev
+    ```
+  </Tab>
+  
+  <Tab title="RHEL/CentOS/Fedora">
+    ```bash
+    sudo yum install \
+      cmake \
+      gcc-c++ \
+      hwloc-devel \
+      jbigkit-devel \
+      libdb-cxx-devel \
+      libjpeg-turbo-devel \
+      libpng-devel \
+      libsqlite3x-devel \
+      libtiff-devel \
+      libzstd-devel \
+      openssl-devel \
+      openjpeg2-devel \
+      xz-devel \
+      zlib-devel
+    ```
+  </Tab>
+  
+  <Tab title="macOS">
+    Install dependencies via [MacPorts](https://www.macports.org/):
+    
+    ```bash
+    sudo port install \
+      berkeley-db \
+      cmake \
+      hwloc \
+      jpeg \
+      openjpeg \
+      libpng \
+      openssl \
+      sqlite3 \
+      tiff \
+      xz \
+      zlib \
+      zstd
+    ```
+    
+    <Note>
+      If building a universal binary, ensure all dependencies use the `+universal` variant:
+      
+      ```bash
+      sudo port install berkeley-db +universal
+      ```
+    </Note>
+  </Tab>
+  
+  <Tab title="Windows">
+    On Windows with Visual Studio, dependencies are managed via [vcpkg](https://github.com/microsoft/vcpkg).
+    
+    Install vcpkg and the required packages:
+    
+    ```powershell
+    vcpkg install \
+      berkeleydb:x64-windows-static \
+      hwloc:x64-windows-static \
+      libjpeg-turbo:x64-windows-static \
+      openjpeg:x64-windows-static \
+      libpng:x64-windows-static \
+      openssl:x64-windows-static \
+      sqlite3:x64-windows-static \
+      tiff:x64-windows-static \
+      zlib:x64-windows-static \
+      zstd:x64-windows-static
+    ```
+    
+    See [Platform-Specific Notes](/building/platforms#windows) for CMake integration.
+  </Tab>
+</Tabs>
+
+## Build Tools
+
+### Required
+
+- **CMake** 3.3 or later
+- **C++11-compatible compiler:**
+  - GCC 4.8+
+  - Clang 3.3+
+  - MSVC 2015+
+  - Apple Clang (Xcode 10+)
+
+### Optional
+
+- **pandoc** - For generating formatted documentation in packages
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build Library" icon="book" href="/building/library">
+    Build the NFIQ 2 library only
+  </Card>
+  
+  <Card title="Build CLI" icon="terminal" href="/building/cli">
+    Build the library and command-line interface
+  </Card>
+</CardGroup>

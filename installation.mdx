@@ -1,0 +1,231 @@
+---
+title: Installation
+description: Download and install pre-built NFIQ2 binaries for your platform
+---
+
+## Download Pre-built Binaries
+
+The easiest way to get started with NFIQ2 is to download pre-built versions from the official GitHub Releases page.
+
+<Note>
+  Unless you are actively developing code for NFIQ2, we highly recommend downloading from [GitHub Releases](https://github.com/usnistgov/NFIQ2/releases) instead of attempting to compile from source.
+</Note>
+
+<Steps>
+  <Step title="Visit GitHub Releases">
+    Navigate to the [NFIQ2 Releases page](https://github.com/usnistgov/NFIQ2/releases) and download the latest version for your platform.
+    
+    Look for the **v2.3** release or newer.
+  </Step>
+  
+  <Step title="Download for Your Platform">
+    Select the appropriate package for your operating system:
+    
+    - **Windows (64-bit)**: `NFIQ2-*-win64.zip`
+    - **Windows (32-bit)**: `NFIQ2-*-win32.zip`
+    - **macOS**: `NFIQ2-*-macos.tar.gz`
+    - **Linux**: `NFIQ2-*-linux.tar.gz`
+  </Step>
+  
+  <Step title="Extract the Archive">
+    Extract the downloaded archive to your preferred location.
+  </Step>
+</Steps>
+
+## System Requirements
+
+### Supported Operating Systems
+
+<Tabs>
+  <Tab title="Windows">
+    - Windows 10 or later (64-bit recommended)
+    - Windows Server 2016 or later
+    - Visual C++ Redistributable (included in release packages)
+    
+    **Architectures**: x64, x86
+  </Tab>
+  
+  <Tab title="macOS">
+    - macOS 10.15 (Catalina) or later
+    - Both Intel and Apple Silicon (M1/M2) supported
+    
+    **Architectures**: x86_64, arm64 (universal binaries available)
+    
+    <Warning>
+      Xcode 10 and later does not support 32-bit applications. To build NFIQ2 for 32-bit macOS, use Xcode 9.4.x.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Linux">
+    - Ubuntu 20.04 LTS or later
+    - Red Hat Enterprise Linux 8 or later
+    - Other distributions with glibc 2.31+
+    
+    **Architectures**: x86_64, aarch64
+  </Tab>
+</Tabs>
+
+### Hardware Requirements
+
+- **RAM**: 512 MB minimum, 2 GB recommended
+- **Disk Space**: 100 MB for library and CLI tool
+- **Processor**: Any modern x86_64 or ARM64 processor
+
+## Installation Paths
+
+### Default Installation Locations
+
+When using NIST's official release packages, files are installed to the following locations:
+
+<CodeGroup>
+```bash Windows (64-bit)
+# Libraries
+C:\Program Files\NFIQ 2\lib\
+
+# Headers
+C:\Program Files\NFIQ 2\include\
+
+# Executables
+C:\Program Files\NFIQ 2\bin\
+
+# Model Files
+C:\Program Files\NFIQ 2\bin\nist_plain_tir-ink.txt
+```
+
+```bash Windows (32-bit)
+# Libraries
+C:\Program Files (x86)\NFIQ 2\lib\
+
+# Headers
+C:\Program Files (x86)\NFIQ 2\include\
+
+# Executables
+C:\Program Files (x86)\NFIQ 2\bin\
+
+# Model Files
+C:\Program Files (x86)\NFIQ 2\bin\nist_plain_tir-ink.txt
+```
+
+```bash macOS
+# Libraries
+/usr/local/nfiq2/lib/
+
+# Headers
+/usr/local/nfiq2/include/
+
+# Executables
+/usr/local/nfiq2/bin/
+
+# Model Files
+/usr/local/nfiq2/bin/nist_plain_tir-ink.txt
+```
+
+```bash Linux
+# Libraries
+/usr/local/nfiq2/lib/
+
+# Headers
+/usr/local/nfiq2/include/
+
+# Executables
+/usr/local/nfiq2/bin/
+
+# Model Files
+/usr/local/nfiq2/bin/nist_plain_tir-ink.txt
+```
+</CodeGroup>
+
+## What's Included
+
+Each release package contains:
+
+### Library Components
+
+- **NFIQ2 Library**: Core library for computing quality scores
+- **Header Files**: C++ API headers for integration
+- **Model Files**: Random forest parameters (e.g., `nist_plain_tir-ink.txt`)
+
+### Command-line Tool
+
+- **nfiq2**: Standalone executable for computing quality scores from the command line
+
+### Dependencies
+
+Release packages include all required dependencies:
+
+- OpenCV (Apache 2 License)
+- FingerJetFX OSE (LGPLv3)
+- digestpp (Public Domain)
+- Biometric Evaluation Framework (Public Domain, CLI only)
+- NIST Fingerprint Image Resampler (Public Domain, CLI only)
+
+## Verify Installation
+
+After installation, verify that NFIQ2 is working correctly:
+
+<Tabs>
+  <Tab title="Windows">
+    ```bash
+    cd "C:\Program Files\NFIQ 2\bin"
+    nfiq2.exe --version
+    ```
+    
+    Expected output:
+    ```
+    NFIQ 2.3.0
+    ```
+  </Tab>
+  
+  <Tab title="macOS / Linux">
+    ```bash
+    /usr/local/nfiq2/bin/nfiq2 --version
+    ```
+    
+    Expected output:
+    ```
+    NFIQ 2.3.0
+    ```
+  </Tab>
+</Tabs>
+
+## Environment Setup
+
+For easier command-line access, add NFIQ2 to your system PATH:
+
+<CodeGroup>
+```bash Windows (PowerShell)
+# Add to PATH temporarily
+$env:Path += ";C:\Program Files\NFIQ 2\bin"
+
+# Add to PATH permanently (requires admin)
+[Environment]::SetEnvironmentVariable(
+    "Path",
+    [Environment]::GetEnvironmentVariable("Path", "Machine") + ";C:\Program Files\NFIQ 2\bin",
+    "Machine"
+)
+```
+
+```bash macOS
+# Add to PATH in ~/.zshrc or ~/.bash_profile
+echo 'export PATH="/usr/local/nfiq2/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+```bash Linux
+# Add to PATH in ~/.bashrc or ~/.profile
+echo 'export PATH="/usr/local/nfiq2/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+</CodeGroup>
+
+## Building from Source
+
+If you need to build NFIQ2 from source (for development or customization), refer to the detailed build instructions in the [GitHub repository README](https://github.com/usnistgov/NFIQ2#quick-build-library).
+
+<Warning>
+  Building from source requires satisfying multiple dependencies and is recommended only for developers. Always use the pre-built binaries for production deployments.
+</Warning>
+
+## Next Steps
+
+Now that you have NFIQ2 installed, continue to the [Quickstart Guide](/quickstart) to compute your first quality score.

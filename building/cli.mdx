@@ -1,0 +1,364 @@
+---
+title: Building with CLI
+description: How to build the NFIQ 2 library and command-line interface
+---
+
+Building NFIQ 2 with the command-line interface provides a standalone executable for quality assessment, along with the library for integration.
+
+<Warning>
+  The CLI build requires additional system dependencies from `libbiomeval`. Ensure you have installed all [required system packages](/building/requirements#system-packages) before proceeding.
+</Warning>
+
+## Quick Build
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone recursively to include all git submodules:
+    
+    ```bash
+    git clone --recursive https://github.com/usnistgov/NFIQ2.git
+    cd NFIQ2
+    ```
+  </Step>
+  
+  <Step title="Install system dependencies">
+    Install required packages for `libbiomeval`:
+    
+    <Tabs>
+      <Tab title="Ubuntu/Debian">
+        ```bash
+        sudo apt-get install build-essential cmake libdb++-dev \
+          libhwloc-dev libjbig-dev libjpeg-dev libopenjp2-7-dev \
+          liblzma-dev libpng-dev libsqlite3-dev libssl-dev \
+          libtiff-dev libzstd-dev zlib1g-dev
+        ```
+      </Tab>
+      
+      <Tab title="macOS">
+        ```bash
+        sudo port install berkeley-db cmake hwloc jpeg openjpeg \
+          libpng openssl sqlite3 tiff xz zlib zstd
+        ```
+      </Tab>
+      
+      <Tab title="Windows">
+        ```powershell
+        vcpkg install berkeleydb:x64-windows-static \
+          hwloc:x64-windows-static libjpeg-turbo:x64-windows-static \
+          openjpeg:x64-windows-static libpng:x64-windows-static \
+          openssl:x64-windows-static sqlite3:x64-windows-static \
+          tiff:x64-windows-static zlib:x64-windows-static \
+          zstd:x64-windows-static
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Create build directory">
+    ```bash
+    mkdir build
+    cd build
+    ```
+  </Step>
+  
+  <Step title="Configure with CMake">
+    The CLI is built by default when `BUILD_NFIQ2_CLI` is not specified:
+    
+    <CodeGroup>
+    ```bash Linux/macOS
+    cmake ..
+    ```
+    
+    ```powershell Windows (with vcpkg)
+    cmake .. ^
+      -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+      -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+      -DCMAKE_CONFIGURATION_TYPES=Release ^
+      -A x64
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Build the library and CLI">
+    <CodeGroup>
+    ```bash Linux/macOS
+    cmake --build .
+    ```
+    
+    ```powershell Windows
+    cmake --build . --config Release
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Build Configuration
+
+### Explicitly Enable CLI
+
+While the CLI is built by default, you can explicitly enable it:
+
+```bash
+cmake .. -DBUILD_NFIQ2_CLI=ON
+```
+
+### Build Type
+
+<CodeGroup>
+```bash Release
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+```bash Debug
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake --build .
+```
+
+```bash Windows/Xcode (multi-config)
+cmake .. -DCMAKE_CONFIGURATION_TYPES=Release
+cmake --build . --config Release
+```
+</CodeGroup>
+
+## Platform-Specific Builds
+
+### Windows with Visual Studio
+
+Windows builds require vcpkg to manage `libbiomeval` dependencies:
+
+```powershell
+# 64-bit Release build
+cmake .. ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+  -DCMAKE_CONFIGURATION_TYPES=Release ^
+  -A x64
+
+cmake --build . --config Release
+```
+
+```powershell
+# 32-bit Release build
+cmake .. ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DVCPKG_TARGET_TRIPLET=x86-windows-static ^
+  -DCMAKE_CONFIGURATION_TYPES=Release ^
+  -A Win32
+
+cmake --build . --config Release
+```
+
+<Note>
+  Adjust the vcpkg path (`C:\vcpkg\`) to match your installation location.
+</Note>
+
+### macOS Universal Binary
+
+To build a universal binary that runs on both Intel and Apple Silicon:
+
+<Steps>
+  <Step title="Install universal dependencies">
+    Ensure all MacPorts dependencies are universal:
+    
+    ```bash
+    sudo port install berkeley-db +universal hwloc +universal \
+      jpeg +universal openjpeg +universal libpng +universal \
+      openssl +universal sqlite3 +universal tiff +universal \
+      xz +universal zlib +universal zstd +universal
+    ```
+  </Step>
+  
+  <Step title="Configure for both architectures">
+    ```bash
+    cmake .. -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+    ```
+  </Step>
+  
+  <Step title="Build">
+    ```bash
+    cmake --build .
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  **All dependencies must be built universally.** Mixing architectures will cause linker errors.
+</Warning>
+
+### Linux
+
+Standard build on Linux:
+
+```bash
+cmake ..
+cmake --build .
+```
+
+For distribution packages:
+
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+cpack
+```
+
+## Build Output
+
+After a successful build, you'll find:
+
+### Executables
+
+- **CLI:** `build/NFIQ2/NFIQ2Algorithm/nfiq2` (Linux/macOS) or `build\NFIQ2\NFIQ2Algorithm\Release\nfiq2.exe` (Windows)
+
+### Libraries
+
+- **NFIQ 2 API:** `libNfiq2Api.a` / `Nfiq2Api.lib`
+- **NFIQ 2 Algorithm:** `libNfiq2Algorithm.a` / `Nfiq2Algorithm.lib`
+- **OpenCV:** OpenCV libraries in `build/OpenCV-prefix/`
+- **FingerJetFX:** `libFRFXLL.a` / `FRFXLL.lib`
+- **libbiomeval:** `libbiomeval.a` / `biomeval.lib`
+- **NFIR:** `libnfir.a` / `nfir.lib`
+
+### Data Files
+
+Random forest model parameters (if not embedded):
+
+- `build/NFIQ2/NFIQ2Algorithm/share/nfiq2/nist_plain_tir-ink.txt`
+
+## Testing the Build
+
+Verify the CLI executable works:
+
+<CodeGroup>
+```bash Linux/macOS
+./NFIQ2/NFIQ2Algorithm/nfiq2 --version
+```
+
+```powershell Windows
+.\NFIQ2\NFIQ2Algorithm\Release\nfiq2.exe --version
+```
+</CodeGroup>
+
+Test with a sample fingerprint image:
+
+```bash
+./NFIQ2/NFIQ2Algorithm/nfiq2 -i path/to/fingerprint.png
+```
+
+## Installation
+
+Install the built binaries and libraries:
+
+<CodeGroup>
+```bash Linux/macOS
+sudo cmake --install .
+```
+
+```powershell Windows (as Administrator)
+cmake --install . --config Release
+```
+</CodeGroup>
+
+Default installation locations:
+
+- **Linux/macOS:** `/usr/local/nfiq2/`
+- **Windows:** `C:\Program Files\NFIQ2\`
+
+### Custom Installation Prefix
+
+```bash
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/nfiq2
+cmake --build .
+sudo cmake --install .
+```
+
+## Creating Distribution Packages
+
+CMake can generate platform-specific installers:
+
+<Tabs>
+  <Tab title="macOS (.pkg)">
+    ```bash
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake --build .
+    cpack -G productbuild
+    ```
+    
+    Output: `nfiq2-{version}-macos-{os_version}-{arch}.pkg`
+  </Tab>
+  
+  <Tab title="Windows (.msi)">
+    Install [WiX Toolset](https://wixtoolset.org/releases/), then:
+    
+    ```powershell
+    cmake .. -DCMAKE_CONFIGURATION_TYPES=Release -A x64
+    cmake --build . --config Release
+    cpack -G WIX -C Release
+    ```
+    
+    Output: `nfiq2-{version}-win64.msi`
+  </Tab>
+  
+  <Tab title="Debian (.deb)">
+    ```bash
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake --build .
+    cpack -G DEB
+    ```
+    
+    Output: `nfiq2_{version}-1_{arch}.deb`
+  </Tab>
+  
+  <Tab title="Red Hat (.rpm)">
+    ```bash
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake --build .
+    cpack -G RPM
+    ```
+    
+    Output: `nfiq2-{version}-1.el{version}.{arch}.rpm`
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+### libbiomeval Dependencies Not Found
+
+Ensure all system packages are installed. On Ubuntu:
+
+```bash
+sudo apt-get install libdb++-dev libssl-dev libsqlite3-dev
+```
+
+### OpenSSL Not Found (macOS)
+
+Specify the OpenSSL root directory:
+
+```bash
+cmake .. -DOPENSSL_ROOT_DIR=/opt/local
+```
+
+### vcpkg Triplet Mismatch (Windows)
+
+Ensure the triplet matches your target architecture:
+
+```powershell
+# For 64-bit static linking
+-DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+# For 32-bit static linking
+-DVCPKG_TARGET_TRIPLET=x86-windows-static
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Usage" icon="terminal" href="/cli/usage">
+    Learn how to use the NFIQ 2 command-line interface
+  </Card>
+  
+  <Card title="Platform Notes" icon="server" href="/building/platforms">
+    Platform-specific build details and limitations
+  </Card>
+</CardGroup>

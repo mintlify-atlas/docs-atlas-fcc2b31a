@@ -1,0 +1,253 @@
+---
+title: Computing Quality Scores
+description: Step-by-step guide to computing unified NFIQ2 quality scores from fingerprint images
+icon: calculator
+---
+
+This guide walks you through the process of computing unified quality scores using the NFIQ2 API, from loading an image to handling errors.
+
+## Overview
+
+NFIQ2 computes unified quality scores (1-5 scale) by:
+1. Loading a fingerprint image
+2. Computing native quality measures
+3. Passing measures through a random forest model
+4. Returning a unified score
+
+## Prerequisites
+
+Before you begin:
+- Include the NFIQ2 header: `#include <nfiq2.hpp>`
+- Images must be 500 PPI (pixels per inch)
+- Images must be decompressed raw grayscale data
+
+<Note>
+NFIQ2 only operates on images captured at 500 PPI. Always verify and convert image resolution to avoid erroneous results.
+</Note>
+
+## Step-by-Step Guide
+
+<Steps>
+  <Step title="Initialize the Algorithm">
+    First, instantiate an `NFIQ2::Algorithm` object. You can either embed the model at build time or load it at runtime.
+
+    <CodeGroup>
+    ```cpp Embedded Model
+    // Model embedded at build time with EMBED_RANDOM_FOREST_PARAMETERS
+    NFIQ2::Algorithm model {};
+    if (!model.isEmbedded()) {
+        std::cerr << "Model is not embedded.\n";
+        return EXIT_FAILURE;
+    }
+    ```
+
+    ```cpp External Model
+    // Load model from file at runtime
+    NFIQ2::ModelInfo modelInfoObj {};
+    try {
+        modelInfoObj = NFIQ2::ModelInfo("nist_plain_tir.txt");
+    } catch (...) {
+        std::cerr << "Could not parse model info file\n";
+        return EXIT_FAILURE;
+    }
+
+    NFIQ2::Algorithm model {};
+    try {
+        model = NFIQ2::Algorithm(modelInfoObj);
+    } catch (...) {
+        std::cerr << "Could not initialize model\n";
+        return EXIT_FAILURE;
+    }
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Load the Fingerprint Image">
+    Create a `FingerprintImageData` object with your image data. The image must be raw, uncompressed 8-bit grayscale.
+
+    ```cpp
+    // Image parameters
+    uint32_t rows = 500;  // Image height
+    uint32_t cols = 500;  // Image width
+    std::shared_ptr<uint8_t> data;  // Raw pixel data
+    const uint16_t PPI = 500;  // Resolution in pixels per inch
+
+    // Load image data (e.g., from PGM, PNG, BMP)
+    // ... your image loading code here ...
+
+    // Construct FingerprintImageData object
+    NFIQ2::FingerprintImageData rawImage = NFIQ2::FingerprintImageData(
+        data.get(),      // Pointer to pixel data
+        cols * rows,     // Total size in bytes
+        cols,            // Width
+        rows,            // Height
+        0,               // Finger position (0 = unknown)
+        PPI              // Resolution (must be 500)
+    );
+    ```
+
+    <Warning>
+    The finger position parameter (4th argument) is informational only. Set to 0 if unknown.
+    </Warning>
+  </Step>
+
+  <Step title="Compute Native Quality Measures">
+    Calculate all native quality measures from the image. These are the individual quality features that will be passed to the random forest.
+
+    ```cpp
+    std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms {};
+    try {
+        algorithms = NFIQ2::QualityMeasures::
+            computeNativeQualityMeasureAlgorithms(rawImage);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error calculating quality features: " 
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+    ```
+
+    This step extracts features like:
+    - Frequency domain analysis (FDA)
+    - Minutiae count and quality
+    - Orientation certainty level (OCL)
+    - Ridge valley uniformity (RVUP)
+    - And more...
+  </Step>
+
+  <Step title="Compute Unified Quality Score">
+    Pass the native quality measures through the random forest model to obtain the unified score.
+
+    ```cpp
+    unsigned int nfiq2Score {};
+    try {
+        nfiq2Score = model.computeUnifiedQualityScore(algorithms);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error calculating NFIQ2 score: " 
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "UnifiedQualityScore: " << nfiq2Score << '\n';
+    ```
+
+    The score ranges from 1 (highest quality) to 5 (lowest quality).
+  </Step>
+</Steps>
+
+## Complete Example
+
+Here's a complete working example from `examples/example_api.cpp`:
+
+```cpp
+#include <nfiq2.hpp>
+#include <iostream>
+#include <memory>
+
+int main(int argc, char **argv) {
+    static const uint16_t PPI = 500;
+
+    // Initialize model (embedded or from file)
+#if defined(NFIQ2_EMBEDDED_MODEL)
+    NFIQ2::Algorithm model {};
+    if (!model.isEmbedded()) {
+        std::cerr << "Model is not embedded.\n";
+        return EXIT_FAILURE;
+    }
+#else
+    NFIQ2::ModelInfo modelInfoObj {};
+    try {
+        modelInfoObj = NFIQ2::ModelInfo(argv[1]);
+    } catch (...) {
+        std::cerr << "Could not parse model info file\n";
+        return EXIT_FAILURE;
+    }
+
+    NFIQ2::Algorithm model {};
+    try {
+        model = NFIQ2::Algorithm(modelInfoObj);
+    } catch (...) {
+        std::cerr << "Could not initialize model\n";
+        return EXIT_FAILURE;
+    }
+#endif
+
+    // Load image data (simplified)
+    uint32_t rows = 0, cols = 0;
+    std::shared_ptr<uint8_t> data {};
+    // ... load your image here ...
+
+    // Create fingerprint image data object
+    NFIQ2::FingerprintImageData rawImage = NFIQ2::FingerprintImageData(
+        data.get(), cols * rows, cols, rows, 0, PPI);
+
+    // Calculate native quality measures
+    std::vector<std::shared_ptr<NFIQ2::QualityMeasures::Algorithm>> algorithms {};
+    try {
+        algorithms = NFIQ2::QualityMeasures::
+            computeNativeQualityMeasureAlgorithms(rawImage);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error in calculating quality features: "
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    // Compute unified quality score
+    unsigned int nfiq2 {};
+    try {
+        nfiq2 = model.computeUnifiedQualityScore(algorithms);
+    } catch (const NFIQ2::Exception &e) {
+        std::cerr << "Error in calculating NFIQ2 score: "
+                  << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "UnifiedQualityScore: " << nfiq2 << '\n';
+    return EXIT_SUCCESS;
+}
+```
+
+## Error Handling
+
+Always wrap NFIQ2 operations in try-catch blocks:
+
+```cpp
+try {
+    // NFIQ2 operations
+} catch (const NFIQ2::Exception &e) {
+    // Handle NFIQ2-specific errors
+    std::cerr << "NFIQ2 Error: " << e.what() << '\n';
+} catch (const std::exception &e) {
+    // Handle standard errors
+    std::cerr << "Error: " << e.what() << '\n';
+} catch (...) {
+    // Handle unknown errors
+    std::cerr << "Unknown error occurred\n";
+}
+```
+
+Common errors:
+- **Image resolution mismatch**: Ensure image is exactly 500 PPI
+- **Invalid image data**: Check image is raw 8-bit grayscale
+- **Model loading failure**: Verify model file path and format
+- **Insufficient image quality**: Some images may be too poor to analyze
+
+## Quality Score Interpretation
+
+| Score | Quality Level | Description |
+|-------|---------------|-------------|
+| 1 | Excellent | Highest quality, optimal for recognition |
+| 2 | Very Good | Very suitable for recognition |
+| 3 | Good | Acceptable for recognition |
+| 4 | Fair | May cause recognition issues |
+| 5 | Poor | Lowest quality, likely recognition failure |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quality Measures" icon="chart-line" href="/guides/quality-measures">
+    Extract and analyze individual quality measures
+  </Card>
+  <Card title="Actionable Feedback" icon="comments" href="/api/quality-measures">
+    Get specific feedback on image quality issues
+  </Card>
+</CardGroup>

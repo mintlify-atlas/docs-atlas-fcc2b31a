@@ -1,122 +1,117 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "NFIQ 2",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#7c7c7c",
+    "light": "#050505",
+    "dark": "#e4e4e4"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/c1bcfb14-498d-46e4-a426-6a6a089fad5a.png",
+  "logo": {
+    "light": "https://media.brand.dev/dfa04ad7-066e-48f1-a6cb-fec918fd2df7.svg",
+    "dark": "https://media.brand.dev/dfa04ad7-066e-48f1-a6cb-fec918fd2df7.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/usnistgov/NFIQ2"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/usnistgov/NFIQ2"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/quality-scores",
+              "concepts/quality-measures",
+              "concepts/actionable-feedback",
+              "concepts/random-forest-model"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Guides",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "guides/computing-scores",
+              "guides/quality-measures",
+              "guides/embedding-models",
+              "guides/conformance-testing"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "CLI Tool",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "cli/overview",
+              "cli/usage",
+              "cli/examples"
+            ]
+          },
+          {
+            "group": "Building from Source",
+            "pages": [
+              "building/requirements",
+              "building/library",
+              "building/cli",
+              "building/platforms"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core Classes",
             "pages": [
-              "api-reference/introduction"
+              "api/algorithm",
+              "api/fingerprint-image-data",
+              "api/model-info"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Quality Measures",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/quality-measures",
+              "api/quality-measure-algorithms",
+              "api/quality-measure-identifiers"
+            ]
+          },
+          {
+            "group": "Quality Modules",
+            "pages": [
+              "api/modules/fda",
+              "api/modules/lcs",
+              "api/modules/mu",
+              "api/modules/ocl-histogram",
+              "api/modules/fjfx-minutiae"
+            ]
+          },
+          {
+            "group": "Supporting Types",
+            "pages": [
+              "api/constants",
+              "api/exceptions",
+              "api/version"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

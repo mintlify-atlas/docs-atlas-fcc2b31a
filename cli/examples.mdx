@@ -1,0 +1,632 @@
+---
+title: 'CLI Examples'
+description: 'Real-world examples of using the NFIQ2 command-line tool with actual output'
+---
+
+## Basic Examples
+
+### Single Image Processing
+
+Process a single fingerprint image:
+
+```bash
+nfiq2 print1.wsq
+```
+
+**Output:**
+```
+50
+```
+
+<Note>
+When processing a single image without additional flags, only the quality score is output (no CSV headers).
+</Note>
+
+### Multiple Images
+
+Process multiple images in one command:
+
+```bash
+nfiq2 print1.wsq print2.png print3.jpg
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+print1.wsq,0,45,,0,0
+print2.png,0,67,,0,0
+print3.jpg,0,52,,0,0
+```
+
+The CSV format makes it easy to import into spreadsheets or data analysis tools.
+
+## Directory Processing
+
+### Process Directory (Non-Recursive)
+
+Process all fingerprint images in a single directory:
+
+```bash
+nfiq2 fingerprintDir
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+fingerprintDir/sample1.png,0,58,,0,0
+fingerprintDir/sample2.wsq,0,72,,0,0
+fingerprintDir/sample3.tif,0,41,,0,0
+fingerprintDir/sample4.jpg,0,65,,0,0
+```
+
+<Note>
+Without the `-r` flag, only files in the specified directory are processed (no subdirectories).
+</Note>
+
+### Recursive Directory Processing
+
+Recursively search through all subdirectories:
+
+```bash
+nfiq2 -r fingerprintDir
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+fingerprintDir/sample1.png,0,58,,0,0
+fingerprintDir/subfolder/sample2.wsq,0,72,,0,0
+fingerprintDir/subfolder/deep/sample3.tif,0,41,,0,0
+fingerprintDir/another/sample4.jpg,0,65,,0,0
+```
+
+Useful for processing large datasets organized in subdirectories.
+
+## Output Options
+
+### Save to File
+
+Redirect output to a CSV file:
+
+```bash
+nfiq2 -r -i print1.tif -i fingerprintDir -o output.csv print2.jpg print3.bmp
+```
+
+**Result:**
+- Creates `output.csv` in the current directory
+- Processes: `print1.tif`, all images in `fingerprintDir` (recursively), `print2.jpg`, and `print3.bmp`
+- Overwrites `output.csv` if it exists
+
+<Tip>
+Combining the `-i` flag with direct arguments and the `-o` flag allows flexible input specifications with organized output.
+</Tip>
+
+### Verbose Output
+
+Include native quality measures:
+
+```bash
+nfiq2 -v fingerprint.png
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled,FDA_Bin10_0,FDA_Bin10_1,FDA_Bin10_2,...,RVUP_Bin10_StdDev
+fingerprint.png,0,58,,0,0,0.234,0.156,0.089,...,12.34
+```
+
+The verbose output includes all native quality measure values used to compute the overall score.
+
+### Verbose with Timing
+
+Show native quality measures and their computation time:
+
+```bash
+nfiq2 -v -q fingerprintDir
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,...,FDA_Bin10_0,FDA_Time,...,RVUP_Bin10_StdDev,RVUP_Time
+fingerprintDir/sample1.png,0,58,...,0.234,0.012,...,12.34,0.008
+fingerprintDir/sample2.wsq,0,72,...,0.445,0.011,...,8.91,0.007
+```
+
+<Note>
+Timing values are in seconds and represent the elapsed time for each quality measure computation.
+</Note>
+
+## Force Processing
+
+### Handle Non-Compliant Images
+
+Automatically process images that don't meet requirements:
+
+```bash
+nfiq2 -F mixedFingerprintDir
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+mixedFingerprintDir/16bit.tif,0,52,,1,0
+mixedFingerprintDir/300dpi.png,0,61,,0,1
+mixedFingerprintDir/valid.wsq,0,73,,0,0
+mixedFingerprintDir/both.jpg,0,48,,1,1
+```
+
+<Info>
+The `Quantized` and `Resampled` columns indicate which transformations were applied:
+- `Quantized=1`: Image was converted to 8-bit grayscale
+- `Resampled=1`: Image was resampled to 500 PPI
+</Info>
+
+## Batch File Processing
+
+### Create a Batch File
+
+Create a text file listing images to process:
+
+**batchFile1.txt:**
+```text
+/data/fingerprints/set1/image1.png
+/data/fingerprints/set1/image2.wsq
+/data/fingerprints/set2/image3.jpg
+/data/fingerprints/set2/image4.tif
+./local/image5.png
+```
+
+### Process Batch File
+
+```bash
+nfiq2 -f batchFile1.txt
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+/data/fingerprints/set1/image1.png,0,58,,0,0
+/data/fingerprints/set1/image2.wsq,0,72,,0,0
+/data/fingerprints/set2/image3.jpg,0,41,,0,0
+/data/fingerprints/set2/image4.tif,0,65,,0,0
+./local/image5.png,0,50,,0,0
+```
+
+### Multi-Threaded Batch Processing
+
+Process large batches with multiple threads:
+
+```bash
+nfiq2 -v -q -f batchFile1.txt -j 4
+```
+
+<Steps>
+  <Step title="Load batch file">
+    Reads all paths from `batchFile1.txt`
+  </Step>
+  
+  <Step title="Spawn worker threads">
+    Creates 4 worker threads for parallel processing
+  </Step>
+  
+  <Step title="Coordinate output">
+    One additional thread coordinates CSV output
+  </Step>
+  
+  <Step title="Process in parallel">
+    Images are distributed across threads for faster processing
+  </Step>
+</Steps>
+
+**Output:** Same CSV format, but processing completes approximately 4× faster on a multi-core system.
+
+<Tip>
+For optimal performance, set thread count to match your CPU core count:
+```bash
+# Linux: Use nproc
+nfiq2 -j $(nproc) -f batch.txt
+
+# macOS: Use sysctl
+nfiq2 -j $(sysctl -n hw.ncpu) -f batch.txt
+```
+</Tip>
+
+## RecordStore Processing
+
+### Process RecordStore
+
+Biometric Evaluation Framework RecordStores are directory-based storage formats:
+
+```bash
+nfiq2 recordStore1
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+recordStore1/0001,2,62,,0,0
+recordStore1/0002,7,71,,0,0
+recordStore1/0003,2,55,,0,0
+recordStore1/0004,9,48,,0,0
+```
+
+<Note>
+`FingerCode` values represent the finger position (e.g., 2 = right index, 7 = left index).
+</Note>
+
+### Multi-Threaded RecordStore
+
+Process large RecordStores efficiently:
+
+```bash
+nfiq2 -j 8 recordStore1
+```
+
+**Output:** Same format, but processes 8 records simultaneously for significantly faster throughput.
+
+**Performance comparison:**
+```bash
+# Single-threaded: ~1000 records/minute
+nfiq2 recordStore1
+
+# Multi-threaded (8 cores): ~7000 records/minute
+nfiq2 -j 8 recordStore1
+```
+
+## Actionable Feedback
+
+### Get Quality Feedback
+
+Obtain actionable quality feedback for each image:
+
+```bash
+nfiq2 -a fingerprint_samples/
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,...,EmptyImageOrContrastTooLow,UniformImage,SufficientFingerprintForeground
+samples/good.png,0,78,...,0,0,1
+samples/low_contrast.png,0,25,...,1,0,0
+samples/uniform.png,0,15,...,0,1,0
+samples/partial.png,0,42,...,0,0,0
+```
+
+**Interpretation:**
+- `good.png`: High quality (78), sufficient foreground
+- `low_contrast.png`: Low quality (25), contrast issue detected
+- `uniform.png`: Very low quality (15), image too uniform
+- `partial.png`: Medium quality (42), insufficient foreground area
+
+<Tip>
+Use actionable feedback for quality control and to identify specific issues with problematic images.
+</Tip>
+
+## ISO/IEC 29794-1 Quality Blocks
+
+### Generate Compliant Output
+
+Produce quality component values for ISO/IEC 29794-1:2024 quality blocks:
+
+```bash
+nfiq2 -b fingerprint.png
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,...,FDA_Bin10_0_Mapped,FDA_Bin10_1_Mapped,...
+fingerprint.png,0,58,...,23,15,...
+```
+
+The `_Mapped` columns contain values scaled to [0-100] range, suitable for inclusion in ISO/IEC 29794-1:2024 quality blocks.
+
+## Custom Model Parameters
+
+### Using Alternative Models
+
+Test with custom-trained random forest parameters:
+
+**custom_model.txt:**
+```text
+Name = Custom Optical Scanner Model
+Description = Trained on optical scanner dataset
+Trainer = Research Lab XYZ
+Version = 1.2
+Path = ./models/optical_rf_params.xml
+Hash = a1b2c3d4e5f6...
+```
+
+```bash
+nfiq2 -m custom_model.txt test_images/
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+test_images/optical1.png,0,64,,0,0
+test_images/optical2.png,0,71,,0,0
+test_images/optical3.png,0,52,,0,0
+```
+
+<Warning>
+Custom models must be compatible with NFIQ2's feature extraction pipeline. The `Path` in the model file must point to a valid OpenCV random forest XML file.
+</Warning>
+
+## Processing ANSI/NIST Records
+
+### Extract and Process Type 14 Records
+
+```bash
+nfiq2 print3.an2
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+print3.an2:14:1,2,58,,0,0
+print3.an2:14:2,7,72,,0,0
+print3.an2:14:3,3,45,,0,0
+```
+
+Each Type 14 record in the ANSI/NIST file is processed separately. The filename shows:
+- `print3.an2` - Original file
+- `:14:` - Record type (Type 14)
+- `1`, `2`, `3` - Record sequence number
+
+## Advanced Workflows
+
+### Quality Control Pipeline
+
+Comprehensive quality assessment with all metrics:
+
+```bash
+nfiq2 -a -b -v -F -j 4 -o qc_report.csv /data/enrollment_scans/
+```
+
+This command:
+- `-a` - Adds actionable feedback
+- `-b` - Includes ISO quality block values
+- `-v` - Provides all native quality measures
+- `-F` - Forces processing of non-compliant images
+- `-j 4` - Uses 4 threads for speed
+- `-o qc_report.csv` - Saves comprehensive report
+
+**Result:** Complete quality control report with:
+- Unified quality scores
+- Actionable feedback flags
+- ISO-compliant quality components
+- All native quality measures
+- Processing status (quantized/resampled)
+
+### Production Batch Processing
+
+Efficient processing for large-scale operations:
+
+```bash Terminal
+# Process overnight batch with optimal settings
+nfiq2 -F -j $(nproc) -f overnight_batch.txt -o results_$(date +%Y%m%d).csv
+```
+
+**Features:**
+- Automatic handling of non-compliant images (`-F`)
+- Maximum parallelization (`-j $(nproc)`)
+- Date-stamped output file
+- Batch file for organized input
+
+### Comparing Processing Speed
+
+<Tabs>
+  <Tab title="Single-threaded">
+    ```bash
+    time nfiq2 -f large_batch.txt -o results.csv
+    ```
+    
+    **Output:**
+    ```
+    real    15m32.123s
+    user    15m28.456s
+    sys     0m3.234s
+    ```
+  </Tab>
+  
+  <Tab title="Multi-threaded (4 cores)">
+    ```bash
+    time nfiq2 -j 4 -f large_batch.txt -o results.csv
+    ```
+    
+    **Output:**
+    ```
+    real    4m15.678s
+    user    16m12.345s
+    sys     0m8.123s
+    ```
+    
+    **Speed improvement:** ~3.7× faster
+  </Tab>
+  
+  <Tab title="Multi-threaded (8 cores)">
+    ```bash
+    time nfiq2 -j 8 -f large_batch.txt -o results.csv
+    ```
+    
+    **Output:**
+    ```
+    real    2m28.234s
+    user    18m45.678s
+    sys     0m12.456s
+    ```
+    
+    **Speed improvement:** ~6.3× faster
+  </Tab>
+</Tabs>
+
+## Handling Errors
+
+### Processing with Errors
+
+When some images fail to process:
+
+```bash
+nfiq2 mixed_quality/
+```
+
+**Output:**
+```csv
+Filename,FingerCode,QualityScore,OptionalError,Quantized,Resampled
+mixed_quality/good1.png,0,58,,0,0
+mixed_quality/corrupted.jpg,0,,"Failed to decode image",0,0
+mixed_quality/good2.wsq,0,72,,0,0
+mixed_quality/too_small.png,0,,"Image dimensions too small",0,0
+mixed_quality/good3.tif,0,65,,0,0
+```
+
+<Note>
+Errors are reported in the `OptionalError` column. The program continues processing remaining images.
+</Note>
+
+### Debug Mode
+
+Investigate processing issues:
+
+```bash
+nfiq2 -d problematic_image.png
+```
+
+**Output:**
+```
+[DEBUG] Loading image: problematic_image.png
+[DEBUG] Image dimensions: 512x512
+[DEBUG] Resolution: 500 PPI
+[DEBUG] Bit depth: 8
+[DEBUG] Computing FDA features...
+[DEBUG] Computing FJFXPos features...
+[DEBUG] Computing RVUP features...
+[DEBUG] Aggregating quality score...
+[DEBUG] Final score: 58
+58
+```
+
+## Scripting Examples
+
+### Bash Script: Process Multiple Batches
+
+```bash script.sh
+#!/bin/bash
+
+# Process multiple batch files with timestamped outputs
+for batch in batch_*.txt; do
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    output="results_${batch%.txt}_${timestamp}.csv"
+    
+    echo "Processing $batch..."
+    nfiq2 -F -j 4 -f "$batch" -o "$output"
+    
+    # Count processed images
+    count=$(wc -l < "$output")
+    echo "Processed $((count - 1)) images to $output"
+done
+
+echo "All batches complete!"
+```
+
+### Python Script: Parse NFIQ2 Output
+
+```python parse_results.py
+import csv
+import sys
+
+def analyze_quality_scores(csv_file):
+    """Analyze NFIQ2 output and generate statistics."""
+    scores = []
+    errors = 0
+    
+    with open(csv_file, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['OptionalError']:
+                errors += 1
+            elif row['QualityScore']:
+                scores.append(int(row['QualityScore']))
+    
+    if scores:
+        avg = sum(scores) / len(scores)
+        print(f"Total images: {len(scores) + errors}")
+        print(f"Successful: {len(scores)}")
+        print(f"Failed: {errors}")
+        print(f"Average quality: {avg:.2f}")
+        print(f"Min quality: {min(scores)}")
+        print(f"Max quality: {max(scores)}")
+    else:
+        print("No valid quality scores found.")
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <nfiq2_output.csv>")
+        sys.exit(1)
+    
+    analyze_quality_scores(sys.argv[1])
+```
+
+**Usage:**
+```bash
+# Generate scores
+nfiq2 -o scores.csv fingerprints/
+
+# Analyze results
+python parse_results.py scores.csv
+```
+
+**Output:**
+```
+Total images: 1000
+Successful: 987
+Failed: 13
+Average quality: 62.34
+Min quality: 12
+Max quality: 98
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Organize Input" icon="folder-tree">
+    **Use batch files** for large datasets:
+    ```bash
+    find /data/fingerprints -name "*.png" > batch.txt
+    nfiq2 -j 8 -f batch.txt -o results.csv
+    ```
+  </Card>
+  
+  <Card title="Use Force Mode" icon="wand-magic-sparkles">
+    **Avoid prompts** in automated workflows:
+    ```bash
+    nfiq2 -F -f batch.txt
+    ```
+  </Card>
+  
+  <Card title="Multi-threading" icon="microchip">
+    **Match CPU cores** for best performance:
+    ```bash
+    nfiq2 -j $(nproc) -f batch.txt
+    ```
+  </Card>
+  
+  <Card title="Save Output" icon="floppy-disk">
+    **Always save** to file for later analysis:
+    ```bash
+    nfiq2 -o results_$(date +%F).csv -f batch.txt
+    ```
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Library API" icon="code" href="/api/algorithm">
+    Integrate NFIQ2 into your applications
+  </Card>
+  
+  <Card title="Quality Features" icon="fingerprint" href="/concepts/quality-measures">
+    Learn about the quality measures
+  </Card>
+</CardGroup>

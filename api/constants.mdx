@@ -1,0 +1,335 @@
+---
+title: Constants
+description: Identifiers, thresholds, and size constants for NFIQ2 quality measures and algorithms
+---
+
+The constants defined in `nfiq2_constants.hpp` provide standardized identifiers for quality measures, algorithms, CBEFF identifiers, actionable feedback, and threshold values used throughout NFIQ2.
+
+## Identifiers Namespace
+
+The `NFIQ2::Identifiers` namespace contains identification strings for various objects used in NFIQ2.
+
+### CBEFF Quality Algorithm Identifiers
+
+CBEFF (Common Biometric Exchange Formats Framework) quality algorithm identifiers.
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Vendor` | `unsigned int` | Quality algorithm vendor identifier |
+| `NFIQ2Rev0` | `unsigned int` | Unified quality score (NFIQ 2.0) |
+| `NFIQ2Rev1` | `unsigned int` | Unified quality score (NFIQ 2.1) |
+| `NFIQ2Rev2` | `unsigned int` | Unified quality score (NFIQ 2.2) |
+| `NFIQ2Rev3` | `unsigned int` | Unified quality score (NFIQ 2.3) |
+
+#### Orientation Certainty
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::OrientationCertainty
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `unsigned int` | Mean of local orientation certainty level |
+| `StdDev` | `unsigned int` | Standard deviation of local orientation certainty level |
+
+#### Local Clarity
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::LocalClarity
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `unsigned int` | Mean of local clarity score |
+| `StdDev` | `unsigned int` | Standard deviation of local clarity score |
+
+#### Frequency Domain Analysis
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::FrequencyDomainAnalysis
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `unsigned int` | Mean of local frequency domain analysis |
+| `StdDev` | `unsigned int` | Standard deviation of local frequency domain analysis |
+
+#### Ridge Valley Uniformity
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::RidgeValleyUniformity
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `unsigned int` | Mean of local ridge valley uniformity |
+| `StdDev` | `unsigned int` | Standard deviation of local ridge valley uniformity |
+
+#### Orientation Flow
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::OrientationFlow
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `unsigned int` | Mean of local orientation flow |
+| `StdDev` | `unsigned int` | Standard deviation of orientation flow |
+
+#### Contrast
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::Contrast
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `ImageMean` | `unsigned int` | Average contrast ("MU") |
+| `MeanOfBlockMeans` | `unsigned int` | Average of average contrasts ("MMB") |
+
+#### Minutiae
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::Minutiae
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Count` | `unsigned int` | Minutiae count |
+| `CountCOM` | `unsigned int` | Minutiae count in center of mass |
+| `PercentImageMean50` | `unsigned int` | Minutiae quality based on image mean |
+| `PercentOrientationCertainty80` | `unsigned int` | Minutiae quality based on orientation certainty level |
+
+#### Region of Interest
+
+```cpp
+namespace NFIQ2::Identifiers::CBEFF::RegionOfInterest
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `unsigned int` | Region of interest image mean |
+| `OrientationMapCoherenceSum` | `unsigned int` | Region of interest orientation map coherence sum |
+| `OrientationMapCoherenceMean` | `unsigned int` | Region of interest relative orientation map coherence sum |
+
+### Actionable Quality Feedback
+
+Identifiers for interpretation of quality measures that may indicate corrective measures for subsequent captures.
+
+```cpp
+namespace NFIQ2::Identifiers::ActionableQualityFeedback
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `EmptyImageOrContrastTooLow` | `const char[]` | The image is blank or the contrast is too low (mean gray level appears white) |
+| `UniformImage` | `const char[]` | Standard deviation of gray levels in image indicates uniformity |
+| `FingerprintImageWithMinutiae` | `const char[]` | Number of minutia in image |
+| `SufficientFingerprintForeground` | `const char[]` | Number of pixels in the computed foreground |
+
+### Unified Quality Scores
+
+Combinations of all quality measures via a pattern classifier.
+
+```cpp
+namespace NFIQ2::Identifiers::UnifiedQualityScores
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `NFIQ2Rev0` | `const char[]` | Unified quality score (NFIQ 2.0) |
+| `NFIQ2Rev1` | `const char[]` | Unified quality score (NFIQ 2.1) |
+| `NFIQ2Rev2` | `const char[]` | Unified quality score (NFIQ 2.2) |
+| `NFIQ2Rev3` | `const char[]` | Unified quality score (NFIQ 2.3) |
+
+### Prediction Algorithms
+
+Algorithms that combine quality measures to compute a unified quality score.
+
+```cpp
+namespace NFIQ2::Identifiers::PredictionAlgorithms
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `RandomForest` | `const char[]` | Identifier for the RandomForest prediction algorithm |
+
+### Quality Measure Algorithms
+
+Algorithms that compute one or more quality measures.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasureAlgorithms
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `FrequencyDomainAnalysis` | `const char[]` | Identifier for the FrequencyDomainAnalysis quality measure algorithm |
+| `MinutiaeCount` | `const char[]` | Identifier for the MinutiaeCount quality measure algorithm |
+| `MinutiaeQuality` | `const char[]` | Identifier for the MinutiaeQuality quality measure algorithm |
+| `LocalClarity` | `const char[]` | Identifier for the LocalClarity quality measure algorithm |
+| `Contrast` | `const char[]` | Identifier for the Contrast quality measure algorithm |
+| `OrientationCertainty` | `const char[]` | Identifier for the OrientationCertainty quality measure algorithm |
+| `OrientationFlow` | `const char[]` | Identifier for the OrientationFlow quality measure algorithm |
+| `RegionOfInterestMean` | `const char[]` | Identifier for the RegionOfInterestMean quality measure algorithm |
+| `RegionOfInterestCoherence` | `const char[]` | Identifier for the RegionOfInterestCoherence quality measure algorithm |
+| `RidgeValleyUniformity` | `const char[]` | Identifier for the RidgeValleyUniformity quality measure algorithm |
+
+### Quality Measures
+
+Identifiers of individual quality measures.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures
+```
+
+#### Frequency Domain Analysis
+
+Frequency of the sinusoid following the ridge-valley structure.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::FrequencyDomainAnalysis
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `const char[]` | Mean of local quality value |
+| `StdDev` | `const char[]` | Standard deviation of local quality values |
+| `Histogram::Bin0` - `Histogram::Bin9` | `const char[]` | Local quality values represented as histogram bins (10 bins total) |
+
+#### Minutiae
+
+Measures relative to minutiae detected using FingerJet FX OSE.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::Minutiae
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Count` | `const char[]` | Number of minutiae in the image |
+| `CountCOM` | `const char[]` | Number of minutiae in a 200x200 pixel rectangle centered at center of mass |
+| `PercentImageMean50` | `const char[]` | Percentage of minutiae with quality value (Contrast::Mean) between 0-0.5 |
+| `PercentOrientationCertainty80` | `const char[]` | Percentage of minutiae with Orientation Certainty Level above 80 |
+
+#### Region of Interest
+
+Measures based on the foreground area of the image.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::RegionOfInterest
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `const char[]` | Mean grayscale value of local regions with at least 1 pixel in the ROI |
+| `CoherenceSum` | `const char[]` | Sum of coherence values over all local regions within the ROI |
+| `CoherenceMean` | `const char[]` | Average of coherence values over all local regions within the ROI |
+
+#### Local Clarity
+
+Measure of the clarity of ridges and valleys.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::LocalClarity
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `const char[]` | Mean of local quality value |
+| `StdDev` | `const char[]` | Standard deviation of local quality values |
+| `Histogram::Bin0` - `Histogram::Bin9` | `const char[]` | Local quality values represented as histogram bins (10 bins total) |
+
+#### Contrast
+
+Measure of the gray levels of the image.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::Contrast
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `ImageMean` | `const char[]` | Arithmetic mean of the image |
+| `MeanOfBlockMeans` | `const char[]` | Arithmetic mean of per-block means of the image |
+
+#### Orientation Certainty
+
+Measure of the strength of energy concentration along dominant ridge flow orientation.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::OrientationCertainty
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `const char[]` | Mean of local quality value |
+| `StdDev` | `const char[]` | Standard deviation of local quality values |
+| `Histogram::Bin0` - `Histogram::Bin9` | `const char[]` | Local quality values represented as histogram bins (10 bins total) |
+
+#### Orientation Flow
+
+Measure of ridge flow continuity based on absolute orientation difference.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::OrientationFlow
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `const char[]` | Mean of local quality value |
+| `StdDev` | `const char[]` | Standard deviation of local quality values |
+| `Histogram::Bin0` - `Histogram::Bin9` | `const char[]` | Local quality values represented as histogram bins (10 bins total) |
+
+#### Ridge Valley Uniformity
+
+Measure of the consistency of ridge and valley widths.
+
+```cpp
+namespace NFIQ2::Identifiers::QualityMeasures::RidgeValleyUniformity
+```
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `Mean` | `const char[]` | Mean of local quality value |
+| `StdDev` | `const char[]` | Standard deviation of local quality values |
+| `Histogram::Bin0` - `Histogram::Bin9` | `const char[]` | Local quality values represented as histogram bins (10 bins total) |
+
+## Thresholds Namespace
+
+Threshold constants for actionable quality feedback.
+
+```cpp
+namespace NFIQ2::Thresholds::ActionableQualityFeedback
+```
+
+Comparing values from `Identifiers::ActionableQualityFeedback` with these thresholds may indicate corrective actions for subsequent captures.
+
+| Constant | Type | Description |
+|----------|------|-------------|
+| `EmptyImageOrContrastTooLow` | `double` | Threshold for empty image or contrast too low detection |
+| `UniformImage` | `double` | Threshold for uniform image detection |
+| `FingerprintImageWithMinutiae` | `double` | Threshold for minutiae presence |
+| `SufficientFingerprintForeground` | `double` | Threshold for foreground sufficiency |
+
+## Sizes Namespace
+
+Block size constants used in quality measure calculations.
+
+```cpp
+namespace NFIQ2::Sizes
+```
+
+| Constant | Type | Value | Description |
+|----------|------|-------|-------------|
+| `LocalRegionSquare` | `unsigned int` | 32 | Pixels (width and height) comprising a local region per ISO/IEC 29794-4:202X |
+| `VerticallyAlignedLocalRegionWidth` | `unsigned int` | 32 | Width after rotating local region to vertically align ridges |
+| `VerticallyAlignedLocalRegionHeight` | `unsigned int` | 16 | Height after rotating local region to vertically align ridges |
+
+## Source Reference
+
+Defined in: `NFIQ2/NFIQ2Algorithm/include/nfiq2_constants.hpp`

@@ -1,0 +1,242 @@
+---
+title: Exception
+description: Error handling and exception types in NFIQ2
+---
+
+NFIQ2 uses a custom exception class for error handling that extends `std::exception`. All exceptions thrown from NFIQ2 functions use this exception type.
+
+## NFIQ2::Exception Class
+
+Exceptions thrown from NFIQ2 functions.
+
+```cpp
+class NFIQ2::Exception : public std::exception
+```
+
+### Constructors
+
+#### Exception(ErrorCode)
+
+Constructor that supplies a default error description.
+
+```cpp
+Exception(const NFIQ2::ErrorCode errorCode)
+```
+
+**Parameters:**
+- `errorCode` - Code that broadly describes the type of error
+
+**Example:**
+```cpp
+throw NFIQ2::Exception(NFIQ2::ErrorCode::BadArguments);
+```
+
+#### Exception(ErrorCode, string)
+
+Constructor that relies on a developer-provided error description.
+
+```cpp
+Exception(
+    const NFIQ2::ErrorCode errorCode,
+    const std::string &errorMessage
+)
+```
+
+**Parameters:**
+- `errorCode` - Code that broadly describes the type of error
+- `errorMessage` - Description of what happened
+
+**Example:**
+```cpp
+throw NFIQ2::Exception(
+    NFIQ2::ErrorCode::InvalidImageSize,
+    "Image dimensions must be at least 100x100 pixels"
+);
+```
+
+### Methods
+
+#### what()
+
+Extracts thrown exception error message string.
+
+```cpp
+virtual const char* what() const noexcept override
+```
+
+**Returns:** The exception message
+
+**Example:**
+```cpp
+try {
+    // NFIQ2 operations
+} catch (const NFIQ2::Exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+}
+```
+
+#### getErrorCode()
+
+Obtain the code that broadly describes the type of error.
+
+```cpp
+NFIQ2::ErrorCode getErrorCode() const
+```
+
+**Returns:** Code that broadly describes the type of error
+
+**Example:**
+```cpp
+try {
+    // NFIQ2 operations
+} catch (const NFIQ2::Exception &e) {
+    if (e.getErrorCode() == NFIQ2::ErrorCode::InvalidImageSize) {
+        // Handle invalid image size
+    }
+}
+```
+
+#### getErrorMessage()
+
+Obtain a description of what happened.
+
+```cpp
+std::string getErrorMessage() const
+```
+
+**Returns:** Description of what happened
+
+**Example:**
+```cpp
+try {
+    // NFIQ2 operations
+} catch (const NFIQ2::Exception &e) {
+    std::string msg = e.getErrorMessage();
+    // Log or display error message
+}
+```
+
+#### defaultErrorMessage() (static)
+
+Obtain a default error message for a given ErrorCode.
+
+```cpp
+static std::string defaultErrorMessage(
+    const NFIQ2::ErrorCode errorCode
+)
+```
+
+**Parameters:**
+- `errorCode` - Error code from ErrorCode enum
+
+**Returns:** String containing default description of `errorCode`
+
+**Example:**
+```cpp
+std::string msg = NFIQ2::Exception::defaultErrorMessage(
+    NFIQ2::ErrorCode::BadArguments
+);
+```
+
+## ErrorCode Enum
+
+Error codes used within the NFIQ2 namespace.
+
+```cpp
+enum class NFIQ2::ErrorCode
+```
+
+### Error Code Values
+
+| Value | Description |
+|-------|-------------|
+| `UnknownError` | An unknown or unspecified error occurred |
+| `NotEnoughMemory` | Insufficient memory available for the operation |
+| `BadArguments` | Invalid or malformed arguments provided |
+| `QualityMeasureCalculationError` | Error during quality measure calculation |
+| `CannotWriteToFile` | Unable to write data to file |
+| `CannotReadFromFile` | Unable to read data from file |
+| `NoDataAvailable` | Required data is not available |
+| `CannotDecodeBase64` | Failed to decode Base64-encoded data |
+| `InvalidConfiguration` | Invalid or malformed configuration |
+| `MachineLearningError` | Error in machine learning operations |
+| `FJFX_CannotCreateContext` | FingerJet FX context creation failed |
+| `FJFX_CannotCreateFeatureSet` | FingerJet FX feature set creation failed |
+| `FJFX_NoFeatureSetCreated` | No FingerJet FX feature set was created |
+| `InvalidUnifiedQualityScore` | Invalid unified quality score value |
+| `InvalidImageSize` | Image dimensions are invalid |
+
+## Usage Examples
+
+### Basic Exception Handling
+
+```cpp
+#include <nfiq2_algorithm.hpp>
+#include <iostream>
+
+try {
+    NFIQ2::Algorithm algorithm;
+    auto result = algorithm.computeQualityScore(rawImage);
+    std::cout << "Quality Score: " << result.getQualityScore() << std::endl;
+} catch (const NFIQ2::Exception &e) {
+    std::cerr << "NFIQ2 Error: " << e.what() << std::endl;
+    return EXIT_FAILURE;
+}
+```
+
+### Handling Specific Error Codes
+
+```cpp
+try {
+    NFIQ2::Algorithm algorithm;
+    auto result = algorithm.computeQualityScore(rawImage);
+} catch (const NFIQ2::Exception &e) {
+    switch (e.getErrorCode()) {
+        case NFIQ2::ErrorCode::InvalidImageSize:
+            std::cerr << "Invalid image dimensions" << std::endl;
+            break;
+        case NFIQ2::ErrorCode::BadArguments:
+            std::cerr << "Invalid arguments provided" << std::endl;
+            break;
+        case NFIQ2::ErrorCode::NotEnoughMemory:
+            std::cerr << "Out of memory" << std::endl;
+            break;
+        default:
+            std::cerr << "Error: " << e.what() << std::endl;
+            break;
+    }
+}
+```
+
+### Custom Error Messages
+
+```cpp
+void validateImage(const NFIQ2::FingerprintImageData &image) {
+    if (image.width < 100 || image.height < 100) {
+        throw NFIQ2::Exception(
+            NFIQ2::ErrorCode::InvalidImageSize,
+            "Image dimensions must be at least 100x100 pixels. "
+            "Got " + std::to_string(image.width) + "x" + 
+            std::to_string(image.height)
+        );
+    }
+}
+```
+
+### Getting Default Messages
+
+```cpp
+for (auto code : {
+    NFIQ2::ErrorCode::BadArguments,
+    NFIQ2::ErrorCode::InvalidImageSize,
+    NFIQ2::ErrorCode::NotEnoughMemory
+}) {
+    std::cout << "Error code default message: "
+              << NFIQ2::Exception::defaultErrorMessage(code)
+              << std::endl;
+}
+```
+
+## Source Reference
+
+Defined in: `NFIQ2/NFIQ2Algorithm/include/nfiq2_exception.hpp`

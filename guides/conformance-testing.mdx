@@ -1,0 +1,451 @@
+---
+title: Conformance Testing
+description: Use the conformance test suite to verify ISO/IEC 29794-4 compliance
+icon: clipboard-check
+---
+
+NFIQ2 includes a conformance test suite to verify that your build correctly implements ISO/IEC 29794-4. This guide shows how to use the test suite and interpret results.
+
+## Overview
+
+The conformance test suite validates that NFIQ2 produces consistent, specification-compliant results by:
+1. Running NFIQ2 on a standardized dataset
+2. Comparing your output against expected reference values
+3. Identifying any discrepancies
+
+<Note>
+The conformance dataset images are subject to a license agreement and must be [downloaded separately from NIST](https://nigos.nist.gov/datasets/nfiq2_conformance/).
+</Note>
+
+## Test Suite Components
+
+The conformance test suite is located in the `conformance/` directory:
+
+```
+conformance/
+├── README.md                                      # Documentation
+├── diff.py                                        # Comparison script
+├── conformance_expected_output-v2.3.0.csv        # Reference output
+└── conformance_expected_output-v2.3.0-mapped.csv # Reference with 0-100 mapping
+```
+
+### Files Included
+
+<AccordionGroup>
+  <Accordion title="conformance_expected_output-v2.3.0.csv" icon="file-csv">
+    Expected output from NFIQ2 v2.3.0 when run against the conformance dataset. Contains:
+    - Unified quality scores
+    - All quality metric values (from `-v` flag)
+    - Actionable feedback (from `-a` flag)
+  </Accordion>
+
+  <Accordion title="conformance_expected_output-v2.3.0-mapped.csv" icon="file-csv">
+    Expected output with all values mapped to 0-100 scale (using `-b` flag).
+  </Accordion>
+
+  <Accordion title="diff.py" icon="code">
+    Python script to compare two CSV outputs from NFIQ2 ≥2.1. Requires Python 3 and Pandas ≥1.1.0.
+  </Accordion>
+</AccordionGroup>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Download Conformance Dataset">
+    Download the conformance dataset images from the [NIST website](https://nigos.nist.gov/datasets/nfiq2_conformance/).
+
+    The dataset contains fingerprint images specifically designed for conformance testing.
+  </Step>
+
+  <Step title="Install Python Dependencies">
+    Install required Python packages:
+
+    ```bash
+    pip install pandas>=1.1.0
+    ```
+
+    Or with conda:
+
+    ```bash
+    conda install pandas>=1.1.0
+    ```
+  </Step>
+
+  <Step title="Build NFIQ2">
+    Build NFIQ2 with the CLI tool enabled:
+
+    ```bash
+    mkdir build && cd build
+    cmake .. -DBUILD_NFIQ2_CLI=ON
+    cmake --build . --config Release
+    ```
+  </Step>
+</Steps>
+
+## Running Conformance Tests
+
+### Step 1: Generate Your Output
+
+Run NFIQ2 on the conformance dataset to generate your output CSV:
+
+```bash
+# Navigate to your build directory
+cd build/bin
+
+# Run NFIQ2 on all conformance images
+./nfiq2 -i /path/to/conformance/images/*.png \
+        -m /path/to/nist_plain_tir-ink.txt \
+        -v -a \
+        -o my_conformance_output.csv
+```
+
+**Flags explained:**
+- `-i`: Input fingerprint images (conformance dataset)
+- `-m`: Model file (random forest parameters)
+- `-v`: Include quality metric values
+- `-a`: Include actionable feedback
+- `-o`: Output CSV file
+
+<Tip>
+For mapped output (0-100 scale), add the `-b` flag and compare against `conformance_expected_output-v2.3.0-mapped.csv`.
+</Tip>
+
+### Step 2: Compare Against Reference Output
+
+Use the `diff.py` script to compare your output with the expected reference:
+
+```bash
+cd /path/to/nfiq2/conformance
+
+python3 diff.py \
+    conformance_expected_output-v2.3.0.csv \
+    /path/to/my_conformance_output.csv
+```
+
+## Understanding Results
+
+### Conformant Output
+
+If your build is conformant, you'll see no output:
+
+```bash
+$ python3 diff.py conformance_expected_output-v2.3.0.csv my_output.csv
+$ echo $?
+0
+```
+
+Exit code 0 indicates perfect conformance.
+
+### Non-Conformant Output
+
+If there are differences, they will be printed:
+
+```bash
+$ python3 diff.py conformance_expected_output-v2.3.0.csv my_output.csv
+"filename","column",csv1_value,csv2_value,difference
+"image001.png","QualityScore",85,84,-1.0
+"image002.png","FDA_Bin10_Mean",12.34,12.35,0.01
+"image003.png","FingerJetFX_MinutiaeCount",42,41,-1.0
+```
+
+Exit code 1 indicates differences were found.
+
+## diff.py Usage
+
+### Basic Usage
+
+```bash
+python3 diff.py <reference.csv> <your_output.csv>
+```
+
+### Command-Line Options
+
+```bash
+python3 diff.py [options] <reference.csv> <your_output.csv>
+```
+
+<ParamField path="reference.csv" type="string" required>
+  Path to the reference CSV (e.g., `conformance_expected_output-v2.3.0.csv`)
+</ParamField>
+
+<ParamField path="your_output.csv" type="string" required>
+  Path to your generated NFIQ2 CSV output
+</ParamField>
+
+<ParamField path="-o" type="string">
+  Write differences to a file instead of stdout
+  
+  ```bash
+  python3 diff.py reference.csv my_output.csv -o differences.csv
+  ```
+</ParamField>
+
+<ParamField path="-s" type="flag">
+  Silent mode: only print True/False to indicate if files match
+  
+  ```bash
+  python3 diff.py reference.csv my_output.csv -s
+  # Output: False (if differences found)
+  #     or: True (if identical)
+  ```
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bash Standard Comparison
+# Compare outputs and display differences
+python3 diff.py \
+    conformance_expected_output-v2.3.0.csv \
+    my_conformance_output.csv
+```
+
+```bash Save Differences to File
+# Write differences to a CSV file
+python3 diff.py \
+    conformance_expected_output-v2.3.0.csv \
+    my_conformance_output.csv \
+    -o differences.csv
+
+# View the differences file
+cat differences.csv
+```
+
+```bash Silent Mode (Boolean Result)
+# Get a simple true/false result
+python3 diff.py \
+    conformance_expected_output-v2.3.0.csv \
+    my_conformance_output.csv \
+    -s
+
+# Use in a script
+if python3 diff.py ref.csv my.csv -s; then
+    echo "Conformance test PASSED"
+else
+    echo "Conformance test FAILED"
+fi
+```
+
+```bash Mapped Output Comparison
+# Generate mapped output (0-100 scale)
+./nfiq2 -i images/*.png -m model.txt -v -a -b -o my_mapped.csv
+
+# Compare against mapped reference
+python3 diff.py \
+    conformance_expected_output-v2.3.0-mapped.csv \
+    my_mapped.csv
+```
+</CodeGroup>
+
+## Validated Columns
+
+The `diff.py` script validates the following columns:
+
+<AccordionGroup>
+  <Accordion title="Basic Metrics" icon="fingerprint">
+    - `Filename`: Image filename
+    - `FingerCode`: Finger position code
+    - `QualityScore`: Unified quality score (1-5)
+    - `OptionalError`: Error messages if any
+  </Accordion>
+
+  <Accordion title="Quality Checks" icon="check-circle">
+    - `Quantized`: Image quantization check
+    - `Resampled`: Image resampling check
+    - `EmptyImageOrContrastTooLow`: Contrast validation
+    - `UniformImage`: Uniformity check
+    - `FingerprintImageWithMinutiae`: Minutiae presence
+    - `SufficientFingerprintForeground`: Foreground adequacy
+  </Accordion>
+
+  <Accordion title="Frequency Domain Analysis (FDA)" icon="wave-sine">
+    - `FDA_Bin10_0` through `FDA_Bin10_9`: Frequency bins
+    - `FDA_Bin10_Mean`: Mean FDA value
+    - `FDA_Bin10_StdDev`: FDA standard deviation
+  </Accordion>
+
+  <Accordion title="Minutiae Features" icon="location-dot">
+    - `FingerJetFX_MinutiaeCount`: Total minutiae count
+    - `FingerJetFX_MinCount_COMMinRect200x200`: Center minutiae
+    - `FJFXPos_Mu_MinutiaeQuality_2`: Minutiae quality
+    - `FJFXPos_OCL_MinutiaeQuality_80`: High-quality minutiae
+  </Accordion>
+
+  <Accordion title="Orientation & Ridge Features" icon="compass">
+    - `OCL_Bin10_*`: Orientation certainty level bins
+    - `OF_Bin10_*`: Orientation flow bins
+    - `LCS_Bin10_*`: Local clarity score bins
+    - `RVUP_Bin10_*`: Ridge valley uniformity bins
+    - `OrientationMap_ROIFilter_CoherenceRel`
+    - `OrientationMap_ROIFilter_CoherenceSum`
+  </Accordion>
+
+  <Accordion title="Other Measures" icon="chart-line">
+    - `ImgProcROIArea_Mean`: ROI area mean
+    - `MMB`: Minutiae-based measure
+    - `Mu`: Mean intensity
+  </Accordion>
+</AccordionGroup>
+
+## Interpreting Differences
+
+### Acceptable Differences
+
+Minor floating-point differences (< 0.001) may occur due to:
+- Different compiler optimizations
+- Platform-specific math libraries
+- Rounding in intermediate calculations
+
+### Unacceptable Differences
+
+Large differences or incorrect quality scores indicate:
+- Build configuration issues
+- Incorrect model file
+- Modified source code
+- Platform-specific bugs
+
+<Warning>
+If you encounter significant differences, verify:
+1. Using the correct model file
+2. Build configuration matches reference
+3. No modifications to source code
+4. Conformance dataset is correct version
+</Warning>
+
+## Automated Testing
+
+Integrate conformance testing into your CI/CD pipeline:
+
+<CodeGroup>
+```bash Shell Script
+#!/bin/bash
+set -e
+
+# Run NFIQ2 on conformance dataset
+./nfiq2 -i conformance_images/*.png \
+        -m nist_plain_tir-ink.txt \
+        -v -a \
+        -o test_output.csv
+
+# Compare with reference
+if python3 conformance/diff.py \
+    conformance/conformance_expected_output-v2.3.0.csv \
+    test_output.csv -s; then
+    echo "✓ Conformance test PASSED"
+    exit 0
+else
+    echo "✗ Conformance test FAILED"
+    python3 conformance/diff.py \
+        conformance/conformance_expected_output-v2.3.0.csv \
+        test_output.csv \
+        -o differences.csv
+    echo "Differences written to differences.csv"
+    exit 1
+fi
+```
+
+```yaml GitHub Actions
+name: Conformance Tests
+
+on: [push, pull_request]
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: |
+          pip install pandas>=1.1.0
+      
+      - name: Build NFIQ2
+        run: |
+          mkdir build && cd build
+          cmake .. -DBUILD_NFIQ2_CLI=ON
+          cmake --build . --config Release
+      
+      - name: Download conformance dataset
+        run: |
+          # Download from NIST (cached)
+          wget -q https://nigos.nist.gov/.../conformance.zip
+          unzip -q conformance.zip
+      
+      - name: Run conformance tests
+        run: |
+          cd build/bin
+          ./nfiq2 -i ../../conformance_images/*.png \
+                  -m ../../nist_plain_tir-ink.txt \
+                  -v -a \
+                  -o test_output.csv
+      
+      - name: Compare results
+        run: |
+          python3 conformance/diff.py \
+            conformance/conformance_expected_output-v2.3.0.csv \
+            build/bin/test_output.csv
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Missing Required Columns
+
+**Error**: `The following required columns are missing in <file>`
+
+**Solution**: Ensure you ran NFIQ2 with both `-v` and `-a` flags:
+```bash
+./nfiq2 -i images/*.png -m model.txt -v -a -o output.csv
+```
+
+### Row Count Mismatch
+
+**Error**: `The number of rows in the CSV files differ`
+
+**Solution**: Verify you're using the complete conformance dataset with all images.
+
+### Unmatched Filenames
+
+**Error**: `Some "Filename" keys are not present in both files`
+
+**Solution**: Check that:
+- File paths in both CSVs use consistent separators
+- All conformance images were processed
+- No extra images were included
+
+### Pandas Version Error
+
+**Error**: `ModuleNotFoundError: No module named 'pandas'`
+
+**Solution**: Install Pandas:
+```bash
+pip install pandas>=1.1.0
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test Early" icon="clock">
+    Run conformance tests immediately after building to catch issues early
+  </Card>
+  <Card title="Automate Testing" icon="robot">
+    Integrate conformance tests into your CI/CD pipeline
+  </Card>
+  <Card title="Document Differences" icon="file-lines">
+    If intentional changes cause differences, document them clearly
+  </Card>
+  <Card title="Version Control" icon="code-branch">
+    Keep conformance outputs in version control to track changes
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Computing Scores" icon="calculator" href="/guides/computing-scores">
+    Learn how to compute quality scores in your application
+  </Card>
+  <Card title="Quality Measures" icon="chart-line" href="/guides/quality-measures">
+    Understand the quality measures being validated
+  </Card>
+</CardGroup>

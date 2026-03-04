@@ -1,0 +1,180 @@
+---
+title: LCS (Local Clarity Score)
+description: Reference for the Local Clarity Score quality module
+---
+
+The **LCS (Local Clarity Score)** module measures the local clarity of ridge-valley structures in fingerprint images. It analyzes the sharpness and definition of ridge patterns across local regions to assess overall image quality.
+
+## Overview
+
+Local Clarity Score evaluates how well-defined and clear the ridge-valley structures are in local neighborhoods of the fingerprint image. Unlike frequency-domain methods, LCS operates in the spatial domain to directly measure ridge clarity based on local gradients and contrast patterns.
+
+<Info>
+LCS is particularly sensitive to image sharpness, ridge definition, and local contrast quality. It complements frequency-domain analysis by providing spatial clarity measurements.
+</Info>
+
+## Class Definition
+
+**Header:** `quality_modules/LCS.h`
+
+```cpp
+class LCS : public Algorithm {
+public:
+    LCS(const NFIQ2::FingerprintImageData &fingerprintImage);
+    virtual ~LCS();
+    
+    std::string getName() const override;
+    static std::vector<std::string> getNativeQualityMeasureIDs();
+
+private:
+    std::unordered_map<std::string, double> computeFeatureData(
+        const NFIQ2::FingerprintImageData &fingerprintImage);
+    
+    const int blocksize { Sizes::LocalRegionSquare };
+    const double threshold { .1 };
+    const int scannerRes { 500 };
+    const bool padFlag { false };
+};
+```
+
+## Constructor
+
+### LCS()
+
+```cpp
+LCS(const NFIQ2::FingerprintImageData &fingerprintImage)
+```
+
+Creates an LCS module instance and computes local clarity features.
+
+**Parameters:**
+- `fingerprintImage` - Input fingerprint image data at 500 dpi
+
+**Throws:**
+- `NFIQ2::Exception` - If the image resolution is not 500 dpi
+
+## Methods
+
+### getName()
+
+```cpp
+std::string getName() const override
+```
+
+Returns the module identifier: `"LocalClarity"`
+
+**Returns:** Module name as string
+
+### getNativeQualityMeasureIDs()
+
+```cpp
+static std::vector<std::string> getNativeQualityMeasureIDs()
+```
+
+Returns the list of quality measure identifiers produced by this module.
+
+**Returns:** Vector containing feature IDs:
+- `LCS_Bin10_0` through `LCS_Bin10_9` - 10 histogram bins
+- `LCS_Bin10_Mean` - Mean local clarity score
+- `LCS_Bin10_StdDev` - Standard deviation of clarity scores
+
+## Quality Features
+
+The LCS module generates 12 quality measures based on local clarity analysis:
+
+### Histogram Bins (0-9)
+
+The local clarity score is computed for each block in the fingerprint image. These scores are then binned into 10 histogram categories using predefined thresholds:
+
+```cpp
+static double LCSHISTLIMITS[9] = { 0, 0.70, 0.74, 0.77, 0.79, 0.81, 0.83, 0.85, 0.87 };
+```
+
+Each bin represents the proportion of blocks with clarity scores in specific ranges:
+- **Lower bins (0-2):** Poor clarity, unclear ridge structures
+- **Middle bins (3-6):** Moderate clarity
+- **Higher bins (7-9):** Excellent clarity, well-defined ridges
+
+### Statistical Measures
+
+- **LCS_Bin10_Mean:** Average clarity score across all blocks
+- **LCS_Bin10_StdDev:** Standard deviation indicating clarity consistency
+
+<Note>
+Higher LCS values indicate better ridge clarity and image sharpness. The module requires 500 dpi resolution images.
+</Note>
+
+## Configuration
+
+The module uses the following default parameters:
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `blocksize` | `Sizes::LocalRegionSquare` | Block size for local analysis |
+| `threshold` | 0.1 | Minimum threshold for valid regions |
+| `scannerRes` | 500 | Expected scanner resolution (dpi) |
+| `padFlag` | false | Padding disabled for boundary blocks |
+
+## Usage Example
+
+```cpp
+#include <quality_modules/LCS.h>
+
+NFIQ2::FingerprintImageData fpImage = /* load image */;
+
+try {
+    NFIQ2::QualityMeasures::LCS lcs(fpImage);
+    
+    // Get all feature IDs
+    auto featureIDs = NFIQ2::QualityMeasures::LCS::getNativeQualityMeasureIDs();
+    
+    // Access computed features
+    auto features = lcs.getFeatures();
+    double meanClarity = features["LCS_Bin10_Mean"];
+    double stddev = features["LCS_Bin10_StdDev"];
+    
+    // Analyze histogram distribution
+    for (int i = 0; i < 10; i++) {
+        std::string binKey = "LCS_Bin10_" + std::to_string(i);
+        double binValue = features[binKey];
+        // Process bin values
+    }
+    
+} catch (const NFIQ2::Exception &e) {
+    // Handle error
+}
+```
+
+## Algorithm Details
+
+The LCS algorithm:
+
+1. Divides the fingerprint image into local blocks
+2. For each block:
+   - Computes local gradients and contrast measures
+   - Analyzes ridge-valley transitions
+   - Calculates a clarity score based on pattern sharpness
+3. Creates a histogram distribution of clarity scores
+4. Computes statistical measures (mean and standard deviation)
+
+### Clarity Score Interpretation
+
+- **0.0 - 0.70:** Very poor clarity, smudged or unclear patterns
+- **0.70 - 0.77:** Poor to fair clarity
+- **0.77 - 0.83:** Moderate clarity, acceptable for some applications
+- **0.83 - 0.87:** Good clarity, clear ridge structures
+- **Above 0.87:** Excellent clarity, highly defined patterns
+
+## Relationship to Other Modules
+
+LCS complements other quality modules:
+
+- **FDA:** While FDA analyzes frequency content, LCS directly measures spatial clarity
+- **OCL:** LCS measures clarity while OCL measures orientation certainty
+- **Mu:** LCS evaluates local sharpness while Mu evaluates overall contrast
+
+## Related Modules
+
+- [FDA (Frequency Domain Analysis)](/api/modules/fda) - Frequency-based quality assessment
+- [OCL Histogram](/api/modules/ocl-histogram) - Orientation certainty measurement
+- [Mu](/api/modules/mu) - Contrast analysis

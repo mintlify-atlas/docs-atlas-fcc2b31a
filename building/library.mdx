@@ -1,0 +1,204 @@
+---
+title: Building the Library
+description: How to build the NFIQ 2 library without the CLI executable
+---
+
+Building only the NFIQ 2 library is useful when you want to integrate NFIQ 2 into your own application without the command-line interface dependencies.
+
+## Quick Build
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone recursively to include all git submodules:
+    
+    ```bash
+    git clone --recursive https://github.com/usnistgov/NFIQ2.git
+    cd NFIQ2
+    ```
+  </Step>
+  
+  <Step title="Create build directory">
+    ```bash
+    mkdir build
+    cd build
+    ```
+  </Step>
+  
+  <Step title="Configure with CMake">
+    Disable the CLI build with the `BUILD_NFIQ2_CLI` option:
+    
+    ```bash
+    cmake .. -DBUILD_NFIQ2_CLI=OFF
+    ```
+  </Step>
+  
+  <Step title="Build the library">
+    ```bash
+    cmake --build .
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Building with `BUILD_NFIQ2_CLI=OFF` skips the `libbiomeval` and NFIR dependencies, significantly reducing build complexity and dependency requirements.
+</Note>
+
+## CMake Configuration Options
+
+### Build Type
+
+Set the build configuration type:
+
+<CodeGroup>
+```bash Release (optimized)
+cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_BUILD_TYPE=Release
+```
+
+```bash Debug (with symbols)
+cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_BUILD_TYPE=Debug
+```
+
+```bash Multi-config generators (Visual Studio, Xcode)
+cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_CONFIGURATION_TYPES=Release
+cmake --build . --config Release
+```
+</CodeGroup>
+
+### Architecture
+
+<Tabs>
+  <Tab title="Windows">
+    Specify architecture with the `-A` flag:
+    
+    ```bash
+    cmake .. -DBUILD_NFIQ2_CLI=OFF -A x64      # 64-bit
+    cmake .. -DBUILD_NFIQ2_CLI=OFF -A Win32    # 32-bit
+    ```
+  </Tab>
+  
+  <Tab title="macOS">
+    Use the `CMAKE_OSX_ARCHITECTURES` environment variable:
+    
+    ```bash
+    # Intel only
+    cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64
+    
+    # Apple Silicon only
+    cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
+    
+    # Universal binary (both architectures)
+    cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+    ```
+  </Tab>
+  
+  <Tab title="Linux">
+    Architecture is typically auto-detected. For cross-compilation or explicit architecture:
+    
+    ```bash
+    # 32-bit
+    cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_C_FLAGS="-m32" -DCMAKE_CXX_FLAGS="-m32"
+    
+    # 64-bit (usually default)
+    cmake .. -DBUILD_NFIQ2_CLI=OFF
+    ```
+  </Tab>
+</Tabs>
+
+### Generator
+
+Change the build system generator:
+
+```bash
+cmake .. -DBUILD_NFIQ2_CLI=OFF -G "Ninja"
+cmake .. -DBUILD_NFIQ2_CLI=OFF -G "Unix Makefiles"
+cmake .. -DBUILD_NFIQ2_CLI=OFF -G "Visual Studio 17 2022"
+cmake .. -DBUILD_NFIQ2_CLI=OFF -G "Xcode"
+```
+
+## Advanced Options
+
+### Embedding Random Forest Parameters
+
+By default, NFIQ 2 loads random forest model parameters from external files. You can embed them directly into the library:
+
+```bash
+cmake .. \
+  -DBUILD_NFIQ2_CLI=OFF \
+  -DEMBED_RANDOM_FOREST_PARAMETERS=ON \
+  -DEMBEDDED_RANDOM_FOREST_PARAMETER_FCT=0
+```
+
+**Options:**
+
+- `EMBED_RANDOM_FOREST_PARAMETERS` (default: `OFF`)
+  - Whether to embed random forest parameters into the library binary
+
+- `EMBEDDED_RANDOM_FOREST_PARAMETER_FCT` (default: `0`)
+  - Friction ridge capture technology (FCT) code per ANSI/NIST-ITL 1-2011: Update 2015
+  - Only used when `EMBED_RANDOM_FOREST_PARAMETERS` is `ON`
+
+<Warning>
+  Embedding parameters increases the library binary size but eliminates the need to distribute model files separately.
+</Warning>
+
+### Installation Prefix
+
+Specify where the library should be installed:
+
+```bash
+cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake --build .
+cmake --install .
+```
+
+On Windows:
+
+```powershell
+cmake .. -DBUILD_NFIQ2_CLI=OFF -DCMAKE_INSTALL_PREFIX="C:\Program Files\NFIQ2"
+cmake --build . --config Release
+cmake --install . --config Release
+```
+
+## Build Output
+
+After a successful build, you'll find:
+
+- **Library:** `libNfiq2Api.a` (static) or `libNfiq2Api.so/.dylib/.dll` (shared)
+- **Headers:** Located in `NFIQ2/NFIQ2Api/include/`
+- **Dependencies:** OpenCV and FingerJetFX libraries in the build directory
+
+## Verification
+
+Verify the library was built successfully:
+
+<CodeGroup>
+```bash Linux/macOS
+ls -lh build/NFIQ2/NFIQ2Api/libNfiq2Api.*
+```
+
+```powershell Windows
+dir build\NFIQ2\NFIQ2Api\Release\Nfiq2Api.lib
+```
+</CodeGroup>
+
+## Platform-Specific Notes
+
+For detailed platform-specific build instructions and troubleshooting, see:
+
+- [Windows](/building/platforms#windows)
+- [macOS](/building/platforms#macos)
+- [Linux](/building/platforms#linux)
+- [Android](/building/platforms#android)
+- [iOS](/building/platforms#ios)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build with CLI" icon="terminal" href="/building/cli">
+    Add the command-line interface to your build
+  </Card>
+  
+  <Card title="API Integration" icon="code" href="/api/algorithm">
+    Learn how to integrate the library into your application
+  </Card>
+</CardGroup>
