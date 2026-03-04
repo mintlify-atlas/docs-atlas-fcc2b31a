@@ -1,0 +1,124 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "NFIQ 2",
+  "projectDescription": "Fingerprint image quality assessment library implementing ISO/IEC 29794-4 standard",
+  "theme": "aspen",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#050505",
+  "darkColor": "#e4e4e4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/quality-scores",
+              "concepts/quality-measures",
+              "concepts/actionable-feedback",
+              "concepts/random-forest-model"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/computing-scores",
+              "guides/quality-measures",
+              "guides/embedding-models",
+              "guides/conformance-testing"
+            ]
+          },
+          {
+            "group": "CLI Tool",
+            "pages": [
+              "cli/overview",
+              "cli/usage",
+              "cli/examples"
+            ]
+          },
+          {
+            "group": "Building from Source",
+            "pages": [
+              "building/requirements",
+              "building/library",
+              "building/cli",
+              "building/platforms"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core Classes",
+            "pages": [
+              "api/algorithm",
+              "api/fingerprint-image-data",
+              "api/model-info"
+            ]
+          },
+          {
+            "group": "Quality Measures",
+            "pages": [
+              "api/quality-measures",
+              "api/quality-measure-algorithms",
+              "api/quality-measure-identifiers"
+            ]
+          },
+          {
+            "group": "Quality Modules",
+            "pages": [
+              "api/modules/fda",
+              "api/modules/lcs",
+              "api/modules/mu",
+              "api/modules/ocl-histogram",
+              "api/modules/fjfx-minutiae"
+            ]
+          },
+          {
+            "group": "Supporting Types",
+            "pages": [
+              "api/constants",
+              "api/exceptions",
+              "api/version"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "ISO/IEC 29794-4 compliant fingerprint quality assessment",
+    "Unified quality scores on 0-100 scale",
+    "Native quality measures computation",
+    "Actionable quality feedback for image capture",
+    "Random forest machine learning model",
+    "Support for 500 PPI optical and ink fingerprints",
+    "Cross-platform support (Windows, macOS, Linux, Android, iOS)",
+    "Command-line interface and C++ library"
+  ],
+  "publicApiSurface": [
+    "NFIQ2::Algorithm",
+    "NFIQ2::Algorithm::computeUnifiedQualityScore",
+    "NFIQ2::Algorithm::getQualityBlockValues",
+    "NFIQ2::FingerprintImageData",
+    "NFIQ2::ModelInfo",
+    "NFIQ2::QualityMeasures::computeNativeQualityMeasureAlgorithms",
+    "NFIQ2::QualityMeasures::computeNativeQualityMeasures",
+    "NFIQ2::QualityMeasures::computeActionableQualityFeedback",
+    "NFIQ2::QualityMeasures::getActionableQualityFeedback",
+    "NFIQ2::QualityMeasures::getNativeQualityMeasures",
+    "NFIQ2::Exception",
+    "Quality Modules: FDA, LCS, Mu, OCLHistogram, FJFXMinutiaeQuality, FingerJetFX, ImgProcROI"
+  ]
+}
